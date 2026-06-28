@@ -37,5 +37,8 @@ func SetupRouter() *gin.Engine {
 		userGroup.DELETE("/user/:id", userCtrl.DeleteUser)
 	}
 
+	// Hot search
+	r.GET("/api/v1/hot_search", controller.HotSearch)
+
 	return r
 }
