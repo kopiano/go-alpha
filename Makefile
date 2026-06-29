@@ -1,25 +1,19 @@
-# make push
 push:
 	@bash push.sh
 
-# make start [ `docker-compose` ]
+# make start
 docker-start:
-	# 后台运行
-	@docker compose up -d
+	@docker scompose up -d
 
-# make remove  [ `docker-compose` ]
+# make remove
 docker-remove:
-	# 删除当前所有容器
 	@docker compose down
-	@docker image rm gin-admin
+	@docker image rm go-alpha:v1
 
-
-# make restart  [ run by `docker-compose` ]
+# make restart
 docker-restart:
-	# 重启当前容器
-	@docker restart gin-admin mysql redis
+	@docker restart go-alpha mysql redis
 
-
-# make stop [ stop by `docker-compose` ]
+# make stop
 docker-stop:
-	@docker stop gin-admin mysql redis
+	@docker stop go-alpha mysql redis

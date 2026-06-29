@@ -34,6 +34,8 @@ redis:
   port: 6379
 ```
 
+docker容器中的mysql，redis改了映射，yaml文件也要改？
+
 ### mysql
 ```shell
 mysql -u root -p

@@ -15,5 +15,5 @@ func main() {
 
 	// Setup router and start
 	r := routes.SetupRouter()
-	log.Fatal(r.Run(":8000"))
+	log.Fatal(r.Run(":8080"))
 }
