@@ -55,7 +55,7 @@ func SetupRouter() *gin.Engine {
 
 	// Visitor stats (Cookie/Session + Redis HyperLogLog)
 	r.POST("/api/v1/visit", controller.RecordVisit)
-	r.GET("/api/v1/visitor/stats", controller.GetVisitorStats)
+	r.GET("/api/v1/visitor", controller.GetVisitor)
 
 	return r
 }
