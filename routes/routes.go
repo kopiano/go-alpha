@@ -11,6 +11,7 @@ import (
 
 var (
 	authController controller.AuthController = controller.NewAuthController()
+	docCtrl        controller.DocController  = controller.DocController{}
 )
 
 func SetupRouter() *gin.Engine {
@@ -31,14 +32,15 @@ func SetupRouter() *gin.Engine {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
-	// Serve uploaded avatars under the API path so it uses the same origin
-	r.Static("/api/v1/avatar", "src/assets/avatar")
+	// avatars
+	r.Static("/api/v1/avatar", "/app/assets/avatar")
 
 	// auth
 	authGroup := r.Group("/api/v1")
 	{
 		authGroup.POST("/login", authController.Login)
 		authGroup.POST("/register", authController.Register)
+		authGroup.POST("/logout", middleware.AuthRequired(), authController.Logout)
 		authGroup.GET("/me", middleware.AuthRequired(), authController.Me)
 	}
 
@@ -68,9 +70,16 @@ func SetupRouter() *gin.Engine {
 	// Music
 	r.GET("/api/v1/music", controller.MusicList)
 
-	// Visitor stats (Cookie/Session + Redis HyperLogLog)
+	// Visitor stats (Cookie/Session + uuid + Redis)
 	r.POST("/api/v1/visit", controller.RecordVisit)
 	r.GET("/api/v1/visitor", controller.GetVisitor)
+
+	// Doc
+	docGroup := r.Group("/api/v1/doc")
+	{
+		docGroup.GET("/list", docCtrl.List)
+		docGroup.POST("/save", docCtrl.Save)
+	}
 
 	return r
 }

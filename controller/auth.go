@@ -17,6 +17,7 @@ type AuthController interface {
 	Login(ctx *gin.Context)
 	Register(ctx *gin.Context)
 	Me(ctx *gin.Context)
+	Logout(ctx *gin.Context)
 }
 
 type authController struct{}
@@ -25,7 +26,7 @@ func NewAuthController() *authController {
 	return &authController{}
 }
 
-const avatarDir = "src/assets/avatar"
+const avatarDir = "/app/assets/avatar"
 
 func (c *authController) Me(ctx *gin.Context) {
 	userId, _ := ctx.Get("userId")
@@ -71,6 +72,9 @@ func (c *authController) Login(ctx *gin.Context) {
 		return
 	}
 
+	// update status to active on login
+	models.DB.Model(user).Update("status", "active")
+
 	response.Success("登录成功", gin.H{
 		"token": token,
 		"user": gin.H{
@@ -80,6 +84,15 @@ func (c *authController) Login(ctx *gin.Context) {
 			"avatar":   user.Avatar,
 		},
 	}, ctx)
+}
+
+func (c *authController) Logout(ctx *gin.Context) {
+	userId, _ := ctx.Get("userId")
+	user := models.User{}.GetUserById(int(userId.(uint)))
+	if user.ID != 0 {
+		models.DB.Model(user).Update("status", "inactive")
+	}
+	response.Success("退出成功", nil, ctx)
 }
 
 func (c *authController) Register(ctx *gin.Context) {
