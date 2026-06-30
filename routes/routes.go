@@ -10,8 +10,11 @@ import (
 )
 
 var (
-	authController controller.AuthController = controller.NewAuthController()
-	docCtrl        controller.DocController  = controller.DocController{}
+	authController    controller.AuthController    = controller.NewAuthController()
+	userController    controller.User              = controller.User{}
+	taskController    controller.TaskController    = controller.TaskController{}
+	docController     controller.DocController     = controller.DocController{}
+	commentController controller.CommentController = controller.CommentController{}
 )
 
 func SetupRouter() *gin.Engine {
@@ -24,8 +27,7 @@ func SetupRouter() *gin.Engine {
 	// CORS
 	r.Use(middleware.CORS())
 
-	userCtrl := controller.User{}
-	taskCtrl := controller.TaskController{}
+	userController := controller.User{}
 
 	// Health check
 	r.GET("/ping", func(c *gin.Context) {
@@ -47,12 +49,12 @@ func SetupRouter() *gin.Engine {
 	// User CRUD
 	userGroup := r.Group("/api/v1")
 	{
-		userGroup.GET("/user", userCtrl.GetAllUsers)
-		userGroup.GET("/user/:id", userCtrl.GetUserById)
-		userGroup.GET("/user/name/:name", userCtrl.GetUserByName)
-		userGroup.POST("/user", userCtrl.AddUser)
-		userGroup.PUT("/user/:id", userCtrl.UpdateUser)
-		userGroup.DELETE("/user/:id", userCtrl.DeleteUser)
+		userGroup.GET("/user", userController.GetAllUsers)
+		userGroup.GET("/user/:id", userController.GetUserById)
+		userGroup.GET("/user/name/:name", userController.GetUserByName)
+		userGroup.POST("/user", userController.AddUser)
+		userGroup.PUT("/user/:id", userController.UpdateUser)
+		userGroup.DELETE("/user/:id", userController.DeleteUser)
 	}
 
 	// Hot search
@@ -61,10 +63,10 @@ func SetupRouter() *gin.Engine {
 	// Task
 	taskGroup := r.Group("/api/v1")
 	{
-		taskGroup.GET("/task", taskCtrl.ListTasks)
-		taskGroup.POST("/task", taskCtrl.AddTask)
-		taskGroup.PUT("/task/:id", taskCtrl.ToggleActive)
-		taskGroup.DELETE("/task/:id", taskCtrl.DeleteTask)
+		taskGroup.GET("/task", taskController.ListTasks)
+		taskGroup.POST("/task", taskController.AddTask)
+		taskGroup.PUT("/task/:id", taskController.ToggleActive)
+		taskGroup.DELETE("/task/:id", taskController.DeleteTask)
 	}
 
 	// Music
@@ -72,14 +74,19 @@ func SetupRouter() *gin.Engine {
 
 	// Visitor stats (Cookie/Session + uuid + Redis)
 	r.POST("/api/v1/visit", controller.RecordVisit)
+	r.POST("/api/v1/visit/heartbeat", controller.VisitorHeartbeat)
 	r.GET("/api/v1/visitor", controller.GetVisitor)
 
 	// Doc
 	docGroup := r.Group("/api/v1/doc")
 	{
-		docGroup.GET("/list", docCtrl.List)
-		docGroup.POST("/save", docCtrl.Save)
+		docGroup.GET("/list", docController.List)
+		docGroup.POST("/save", docController.Save)
 	}
 
+	// Comment
+	r.GET("/api/v1/comment", commentController.ListComments)
+	r.POST("/api/v1/comment", commentController.AddComment)
+	r.POST("/api/v1/comment/:id/likes", commentController.ReactionComment)
 	return r
 }

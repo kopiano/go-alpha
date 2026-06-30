@@ -1,0 +1,8 @@
+./auth.go
+./comment.go
+./doc.go
+./hot_search.go
+./music.go
+./task.go
+./user.go
+./visitor.go

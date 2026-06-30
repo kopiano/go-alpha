@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go-alpha/models"
@@ -37,10 +38,12 @@ func (c *authController) Me(ctx *gin.Context) {
 	}
 
 	response.Success("ok", gin.H{
-		"id":       user.ID,
-		"username": user.Username,
-		"email":    user.Email,
-		"avatar":   user.Avatar,
+		"id":            user.ID,
+		"username":      user.Username,
+		"email":         user.Email,
+		"avatar":        user.Avatar,
+		"status":        user.Status,
+		"last_login_at": user.LastLoginAt,
 	}, ctx)
 }
 
@@ -78,10 +81,12 @@ func (c *authController) Login(ctx *gin.Context) {
 	response.Success("登录成功", gin.H{
 		"token": token,
 		"user": gin.H{
-			"id":       user.ID,
-			"username": user.Username,
-			"email":    user.Email,
-			"avatar":   user.Avatar,
+			"id":            user.ID,
+			"username":      user.Username,
+			"email":         user.Email,
+			"avatar":        user.Avatar,
+			"status":        "active",
+			"last_login_at": user.LastLoginAt,
 		},
 	}, ctx)
 }
@@ -90,7 +95,11 @@ func (c *authController) Logout(ctx *gin.Context) {
 	userId, _ := ctx.Get("userId")
 	user := models.User{}.GetUserById(int(userId.(uint)))
 	if user.ID != 0 {
-		models.DB.Model(user).Update("status", "inactive")
+		now := time.Now()
+		models.DB.Model(user).Updates(map[string]any{
+			"status":        "inactive",
+			"last_login_at": now,
+		})
 	}
 	response.Success("退出成功", nil, ctx)
 }
@@ -145,6 +154,7 @@ func (c *authController) Register(ctx *gin.Context) {
 		Username: username,
 		Email:    email,
 		Password: string(hashed),
+		Status:   "inactive",
 	}
 	if err := models.DB.Create(&newUser).Error; err != nil {
 		log.Printf("[error] Register: Create: %s", err)
@@ -187,10 +197,12 @@ func (c *authController) Register(ctx *gin.Context) {
 	response.Success("注册成功", gin.H{
 		"token": token,
 		"user": gin.H{
-			"id":       newUser.ID,
-			"username": newUser.Username,
-			"email":    newUser.Email,
-			"avatar":   newUser.Avatar,
+			"id":            newUser.ID,
+			"username":      newUser.Username,
+			"email":         newUser.Email,
+			"avatar":        newUser.Avatar,
+			"status":        newUser.Status,
+			"last_login_at": newUser.LastLoginAt,
 		},
 	}, ctx)
 }

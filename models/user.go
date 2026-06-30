@@ -12,8 +12,7 @@ type User struct {
 	Email       string     `gorm:"type:varchar(100)" json:"email"`
 	Password    string     `gorm:"type:varchar(100);not null" json:"-"` // 无需显示
 	Website     string     `gorm:"type:varchar(100)" json:"website"`
-	Status      string     `gorm:"type:varchar(100);default:active" json:"status"`
-	Content     string     `gorm:"type:text" json:"content"`                        // comment
+	Status      string     `gorm:"type:varchar(100);default:inactive" json:"status"`
 	Avatar      string     `gorm:"type:varchar(255);default:null" json:"avatar"`    // 允许默认头像
 	LastLoginAt *time.Time `gorm:"type:datetime;default:null" json:"last_login_at"` // 最后登录日期，注册日期为Create_at
 }
@@ -37,6 +36,9 @@ func (User) GetUserByName(name string) *User {
 }
 
 func (user *User) AddUser() *User {
+	if user.Status == "" {
+		user.Status = "inactive"
+	}
 	DB.Create(user)
 	return user
 }
