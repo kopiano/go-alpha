@@ -93,14 +93,14 @@ func (c *authController) Login(ctx *gin.Context) {
 
 func (c *authController) Logout(ctx *gin.Context) {
 	userId, _ := ctx.Get("userId")
-	user := models.User{}.GetUserById(int(userId.(uint)))
-	if user.ID != 0 {
-		now := time.Now()
-		models.DB.Model(user).Updates(map[string]any{
-			"status":        "inactive",
-			"last_login_at": now,
-		})
-	}
+	id := int(userId.(uint))
+
+	result := models.DB.Model(&models.User{}).Where("id = ?", id).Updates(map[string]any{
+		"status":        "inactive",
+		"last_login_at": time.Now(),
+	})
+	slog.Info("Logout update", "id", id, "rows_affected", result.RowsAffected)
+
 	response.Success("退出成功", nil, ctx)
 }
 

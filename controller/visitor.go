@@ -283,15 +283,12 @@ func RecordVisit(c *gin.Context) {
 	today := time.Now().Format("2006-01-02")
 
 	// Redis real-time counting
+	slog.Debug("RecordVisit called", "visitor_id", visitorID, "duration", form.Duration)
+
 	models.RDB.PFAdd(ctx, fmt.Sprintf("visit:uv:%s", today), visitorID)
 	models.RDB.PFAdd(ctx, "visit:uv:total", visitorID)
 	models.RDB.Incr(ctx, fmt.Sprintf("visit:pv:%s", today))
 	models.RDB.Incr(ctx, "visit:pv:total")
-
-	// MySQL persistence (every visit syncs today's stats)
-	todayUV, _ := models.RDB.PFCount(ctx, fmt.Sprintf("visit:uv:%s", today)).Result()
-	todayPV, _ := models.RDB.Get(ctx, fmt.Sprintf("visit:pv:%s", today)).Int64()
-	models.VisitorSummary{}.Upsert(today, todayUV, todayPV)
 
 	// Refresh cache
 	totalUV, _ := models.RDB.PFCount(ctx, "visit:uv:total").Result()
@@ -339,6 +336,10 @@ func RecordVisit(c *gin.Context) {
 		response.Failed("记录访问失败", c)
 		return
 	}
+
+	// Persist daily visitor to MySQL
+	models.VisitorSummary{}.UpsertDaily(today, visitorID)
+
 
 	data := gin.H{
 		"visitor_id":     visitorID,
@@ -400,7 +401,7 @@ func VisitorHeartbeat(c *gin.Context) {
 	}, c)
 }
 
-// GetVisitor reads from Redis cache, falls back to MySQL.
+// GetVisitor 统一从 MySQL 读，Redis 只做缓存加速
 func GetVisitor(c *gin.Context) {
 	ctx := context.Background()
 	today := time.Now().Format("2006-01-02")
@@ -411,39 +412,40 @@ func GetVisitor(c *gin.Context) {
 		return
 	}
 
-	totalUV, err := models.RDB.Get(ctx, "visit:cache:total_uv").Int64()
-	if err == nil {
-		// Cache hit — read everything from Redis
-		totalPV, _ := models.RDB.Get(ctx, "visit:cache:total_pv").Int64()
-		todayUV, _ := models.RDB.PFCount(ctx, fmt.Sprintf("visit:uv:%s", today)).Result()
-		todayPV, _ := models.RDB.Get(ctx, fmt.Sprintf("visit:pv:%s", today)).Int64()
+	// Today's UV = distinct visitors, PV = sum of visit_count
+	var todayUV, todayPV int64
+	models.DB.Model(&models.VisitorSummary{}).
+		Where("date = ?", today).
+		Select("COUNT(DISTINCT visitor_id), COALESCE(SUM(visit_count), 0)").
+		Row().Scan(&todayUV, &todayPV)
 
-		weekKeys := make([]string, 7)
-		for i := 0; i < 7; i++ {
-			d := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
-			weekKeys[i] = fmt.Sprintf("visit:uv:%s", d)
-		}
-		weekUV, _ := models.RDB.PFCount(ctx, weekKeys...).Result()
-
-		response.Success("获取统计成功", visitorStatsData(totalPV, totalUV, todayPV, todayUV, weekUV, visitors), c)
-		return
-	}
-
-	// Cache miss — read today from MySQL, total from Redis HLL
-	var daily models.VisitorSummary
-	models.DB.Where("date = ?", today).First(&daily)
-
+	// Week UV = sum of daily unique visitors
 	weekStart := time.Now().AddDate(0, 0, -6).Format("2006-01-02")
-	var weekStats []models.VisitorSummary
-	models.DB.Where("date >= ?", weekStart).Find(&weekStats)
-
+	type uvRow struct {
+		UV int64
+	}
+	var uvRows []uvRow
+	models.DB.Model(&models.VisitorSummary{}).
+		Where("date >= ?", weekStart).
+		Select("COUNT(DISTINCT visitor_id) as uv").
+		Group("date").
+		Scan(&uvRows)
 	var weekUV int64
-	for _, s := range weekStats {
-		weekUV += s.UV
+	for _, r := range uvRows {
+		weekUV += r.UV
 	}
 
-	totalUV, _ = models.RDB.PFCount(ctx, "visit:uv:total").Result()
-	totalPV, _ := models.RDB.Get(ctx, "visit:pv:total").Int64()
+	// Total PV/UV — try Redis cache, fall back to MySQL
+	totalUV, err := models.RDB.Get(ctx, "visit:cache:total_uv").Int64()
+	var totalPV int64
+	if err == nil {
+		totalPV, _ = models.RDB.Get(ctx, "visit:cache:total_pv").Int64()
+	} else {
+		models.DB.Model(&models.VisitorSummary{}).Select("COALESCE(SUM(visit_count), 0)").Scan(&totalPV)
+		models.DB.Model(&models.Visitor{}).Select("COUNT(*)").Scan(&totalUV)
+		models.RDB.Set(ctx, "visit:cache:total_uv", totalUV, 10*time.Minute)
+		models.RDB.Set(ctx, "visit:cache:total_pv", totalPV, 10*time.Minute)
+	}
 
-	response.Success("获取统计成功", visitorStatsData(totalPV, totalUV, daily.PV, daily.UV, weekUV, visitors), c)
+	response.Success("获取统计成功", visitorStatsData(totalPV, totalUV, todayPV, todayUV, weekUV, visitors), c)
 }

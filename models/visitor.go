@@ -1,24 +1,44 @@
 package models
 
 import (
+	"crypto/rand"
 	"errors"
+	"log/slog"
+	"math/big"
 	"time"
 
 	"gorm.io/gorm"
 )
 
 type VisitorSummary struct {
-	ID        uint      `gorm:"primarykey" json:"id"`
-	Date      string    `gorm:"type:date;uniqueIndex;not null" json:"date"` // 统计日期
-	UV        int64     `gorm:"default:0" json:"uv"`                        // 真实访客人数cookie + uuid唯一标识
-	PV        int64     `gorm:"default:0" json:"pv"`                        // 总访问量
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         uint      `gorm:"primarykey" json:"id"`
+	Date       string    `gorm:"type:date;index;not null" json:"date"`
+	VisitorID  string    `gorm:"type:varchar(32);index;not null" json:"visitor_id"`
+	VisitCount int64     `gorm:"default:0" json:"visit_count"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+func (VisitorSummary) TableName() string {
+	return "visitor_summary"
+}
+
+func (VisitorSummary) UpsertDaily(date string, visitorID string) {
+	err := DB.Where("date = ? AND visitor_id = ?", date, visitorID).
+		Assign(map[string]any{"visit_count": gorm.Expr("visit_count + 1")}).
+		FirstOrCreate(&VisitorSummary{
+			Date:      date,
+			VisitorID: visitorID,
+			VisitCount: 1,
+		})
+	if err.Error != nil {
+		slog.Error("VisitorSummary.UpsertDaily failed", "date", date, "visitor_id", visitorID, "error", err.Error)
+	}
 }
 
 type Visitor struct {
 	ID              uint      `gorm:"primarykey" json:"id"`
-	VisitorID       string    `gorm:"type:varchar(64);uniqueIndex;not null" json:"visitor_id"`
+	VisitorID       string    `gorm:"type:varchar(32);uniqueIndex;not null" json:"visitor_id"`
 	UserName        string    `gorm:"type:varchar(100)" json:"user_name"`
 	Avatar          string    `gorm:"type:varchar(255)" json:"avatar"`
 	IP              string    `gorm:"type:varchar(64)" json:"ip"`
@@ -28,6 +48,7 @@ type Visitor struct {
 	FirstSeen       time.Time `gorm:"type:datetime;not null" json:"first_seen"`
 	LastSeen        time.Time `gorm:"type:datetime;not null" json:"last_seen"`
 	TotalBrowseTime int64     `gorm:"default:0;not null" json:"total_browse_time"`
+	VisitCount      int64     `gorm:"default:0;not null" json:"visit_count"`
 	OS              string    `gorm:"type:varchar(50)" json:"os"`
 	Browser         string    `gorm:"type:varchar(50)" json:"browser"`
 	Device          string    `gorm:"type:varchar(50)" json:"device"`
@@ -36,23 +57,14 @@ type Visitor struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
-func (VisitorSummary) TableName() string {
-	return "visitor_summary"
-}
-
-func (VisitorSummary) Upsert(date string, uv, pv int64) {
-	// Insert or update if date already exists
-	DB.Where("date = ?", date).Assign(VisitorSummary{UV: uv, PV: pv}).FirstOrCreate(&VisitorSummary{
-		Date: date,
-		UV:   uv,
-		PV:   pv,
-	})
-}
-
-func (VisitorSummary) GetStats() *VisitorSummary {
-	var stats VisitorSummary
-	DB.Where("date = ?", time.Now().Format("2006-01-02")).First(&stats)
-	return &stats
+func generateShortID() string {
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, 8)
+	for i := range b {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		b[i] = charset[n.Int64()]
+	}
+	return string(b)
 }
 
 func (visitor *Visitor) UpsertVisit(duration int64) (*Visitor, error) {
@@ -84,9 +96,11 @@ func (visitor *Visitor) UpsertVisit(duration int64) (*Visitor, error) {
 	}
 
 	// 3) Truly new visitor — insert.
+	visitor.VisitorID = generateShortID()
 	visitor.FirstSeen = now
 	visitor.LastSeen = now
 	visitor.TotalBrowseTime = duration
+	visitor.VisitCount = 1
 	return visitor, DB.Create(visitor).Error
 }
 
@@ -100,6 +114,7 @@ func applyVisitorUpdates(existing *Visitor, incoming *Visitor, duration int64, n
 		"location":          incoming.Location,
 		"last_seen":         now,
 		"total_browse_time": existing.TotalBrowseTime + duration,
+		"visit_count":       gorm.Expr("visit_count + 1"),
 		"os":                incoming.OS,
 		"browser":           incoming.Browser,
 		"device":            incoming.Device,
