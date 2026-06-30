@@ -1,73 +1,72 @@
 package models
 
 import (
-	"crypto/rand"
 	"errors"
+	"fmt"
+	"hash/fnv"
 	"log/slog"
-	"math/big"
 	"time"
 
 	"gorm.io/gorm"
 )
 
 type VisitorSummary struct {
-	ID         uint      `gorm:"primarykey" json:"id"`
-	Date       string    `gorm:"type:date;index;not null" json:"date"`
-	VisitorID  string    `gorm:"type:varchar(32);index;not null" json:"visitor_id"`
-	VisitCount int64     `gorm:"default:0" json:"visit_count"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID        uint      `gorm:"primarykey" json:"id"`
+	Date      string    `gorm:"type:date;uniqueIndex;not null" json:"date"`
+	UV        int64     `gorm:"default:0" json:"uv"`
+	PV        int64     `gorm:"default:0" json:"pv"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (VisitorSummary) TableName() string {
 	return "visitor_summary"
 }
 
-func (VisitorSummary) UpsertDaily(date string, visitorID string) {
-	err := DB.Where("date = ? AND visitor_id = ?", date, visitorID).
-		Assign(map[string]any{"visit_count": gorm.Expr("visit_count + 1")}).
-		FirstOrCreate(&VisitorSummary{
-			Date:      date,
-			VisitorID: visitorID,
-			VisitCount: 1,
-		})
-	if err.Error != nil {
-		slog.Error("VisitorSummary.UpsertDaily failed", "date", date, "visitor_id", visitorID, "error", err.Error)
+func (VisitorSummary) Upsert(date string, uv, pv int64) {
+	err := DB.Where("date = ?", date).Assign(VisitorSummary{UV: uv, PV: pv}).FirstOrCreate(&VisitorSummary{
+		Date: date,
+		UV:   uv,
+		PV:   pv,
+	}).Error
+	if err != nil {
+		slog.Error("VisitorSummary.Upsert failed", "date", date, "uv", uv, "pv", pv, "error", err)
 	}
 }
 
 type Visitor struct {
-	ID              uint      `gorm:"primarykey" json:"id"`
-	VisitorID       string    `gorm:"type:varchar(32);uniqueIndex;not null" json:"visitor_id"`
-	UserName        string    `gorm:"type:varchar(100)" json:"user_name"`
-	Avatar          string    `gorm:"type:varchar(255)" json:"avatar"`
-	IP              string    `gorm:"type:varchar(64)" json:"ip"`
-	Country         string    `gorm:"type:varchar(100)" json:"country"`
-	City            string    `gorm:"type:varchar(100)" json:"city"`
-	Location        string    `gorm:"type:varchar(255)" json:"location"`
-	FirstSeen       time.Time `gorm:"type:datetime;not null" json:"first_seen"`
-	LastSeen        time.Time `gorm:"type:datetime;not null" json:"last_seen"`
-	TotalBrowseTime int64     `gorm:"default:0;not null" json:"total_browse_time"`
-	VisitCount      int64     `gorm:"default:0;not null" json:"visit_count"`
-	OS              string    `gorm:"type:varchar(50)" json:"os"`
-	Browser         string    `gorm:"type:varchar(50)" json:"browser"`
-	Device          string    `gorm:"type:varchar(50)" json:"device"`
-	Status          string    `gorm:"type:varchar(50);default:inactive" json:"status"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID                uint      `gorm:"primarykey" json:"id"`
+	VisitorID         string    `gorm:"type:varchar(64);uniqueIndex;not null" json:"visitor_id"`
+	UserName          string    `gorm:"type:varchar(100)" json:"user_name"`
+	Avatar            string    `gorm:"type:varchar(255)" json:"avatar"`
+	IP                string    `gorm:"type:varchar(64)" json:"ip"`
+	Country           string    `gorm:"type:varchar(100)" json:"country"`
+	City              string    `gorm:"type:varchar(100)" json:"city"`
+	Location          string    `gorm:"type:varchar(255)" json:"location"`
+	FirstSeen         time.Time `gorm:"type:datetime;not null" json:"first_seen"`
+	LastSeen          time.Time `gorm:"type:datetime;not null" json:"last_seen"`
+	TotalBrowseTime   int64     `gorm:"default:0;not null" json:"total_browse_time"`
+	VisitCount        int64     `gorm:"default:0;not null" json:"visit_count"`
+	OS                string    `gorm:"type:varchar(50)" json:"os"`
+	Browser           string    `gorm:"type:varchar(50)" json:"browser"`
+	Device            string    `gorm:"type:varchar(50)" json:"device"`
+	Status            string    `gorm:"type:varchar(50);default:inactive" json:"status"`
+	DeviceFingerprint string    `gorm:"type:varchar(512)" json:"device_fingerprint"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
-func generateShortID() string {
-	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
-	b := make([]byte, 8)
-	for i := range b {
-		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
-		b[i] = charset[n.Int64()]
-	}
-	return string(b)
+// stableShortID 从任意 visitor_id 生成 8 位稳定短 ID（相同输入 → 相同输出）
+func stableShortID(id string) string {
+	h := fnv.New32a()
+	h.Write([]byte(id))
+	return fmt.Sprintf("%x", h.Sum32())
 }
 
 func (visitor *Visitor) UpsertVisit(duration int64) (*Visitor, error) {
+	// Convert to stable short ID
+	visitor.VisitorID = stableShortID(visitor.VisitorID)
+
 	now := time.Now()
 	var existing Visitor
 
@@ -80,13 +79,13 @@ func (visitor *Visitor) UpsertVisit(duration int64) (*Visitor, error) {
 		return nil, err
 	}
 
-	// 2) Not found by visitor_id — if username + ip are both present,
-	//    check whether the same user+ip already exists under a different
-	//    visitor_id (e.g. localStorage cleared, device switch, bucket change).
-	if visitor.UserName != "" && visitor.IP != "" {
-		err = DB.Where("user_name = ? AND ip = ?", visitor.UserName, visitor.IP).First(&existing).Error
+	// 2) Not found by visitor_id — try matching by device_fingerprint + IP
+
+	//    (handles localStorage cleared, incognito, cookie expiry).
+	if visitor.DeviceFingerprint != "" {
+		err = DB.Where("device_fingerprint = ? AND ip = ?", visitor.DeviceFingerprint, visitor.IP).
+			First(&existing).Error
 		if err == nil {
-			// Merge into the existing record, updating visitor_id.
 			existing.VisitorID = visitor.VisitorID
 			return applyVisitorUpdates(&existing, visitor, duration, now)
 		}
@@ -95,8 +94,20 @@ func (visitor *Visitor) UpsertVisit(duration int64) (*Visitor, error) {
 		}
 	}
 
-	// 3) Truly new visitor — insert.
-	visitor.VisitorID = generateShortID()
+	// 3) Fallback: match by IP + username
+	if visitor.IP != "" && visitor.UserName != "" {
+		err = DB.Where("ip = ? AND user_name = ?", visitor.IP, visitor.UserName).
+			First(&existing).Error
+		if err == nil {
+			existing.VisitorID = visitor.VisitorID
+			return applyVisitorUpdates(&existing, visitor, duration, now)
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+	}
+
+	// 5) Truly new visitor — insert.
 	visitor.FirstSeen = now
 	visitor.LastSeen = now
 	visitor.TotalBrowseTime = duration
@@ -107,19 +118,20 @@ func (visitor *Visitor) UpsertVisit(duration int64) (*Visitor, error) {
 // applyVisitorUpdates persists the merged fields and returns the updated record.
 func applyVisitorUpdates(existing *Visitor, incoming *Visitor, duration int64, now time.Time) (*Visitor, error) {
 	updates := map[string]any{
-		"visitor_id":        existing.VisitorID,
-		"ip":                incoming.IP,
-		"country":           incoming.Country,
-		"city":              incoming.City,
-		"location":          incoming.Location,
-		"last_seen":         now,
-		"total_browse_time": existing.TotalBrowseTime + duration,
-		"visit_count":       gorm.Expr("visit_count + 1"),
-		"os":                incoming.OS,
-		"browser":           incoming.Browser,
-		"device":            incoming.Device,
-		"status":            incoming.Status,
-		"avatar":            incoming.Avatar,
+		"visitor_id":         existing.VisitorID,
+		"device_fingerprint": incoming.DeviceFingerprint,
+		"ip":                 incoming.IP,
+		"country":            incoming.Country,
+		"city":               incoming.City,
+		"location":           incoming.Location,
+		"last_seen":          now,
+		"total_browse_time":  existing.TotalBrowseTime + duration,
+		"visit_count":        gorm.Expr("visit_count + 1"),
+		"os":                 incoming.OS,
+		"browser":            incoming.Browser,
+		"device":             incoming.Device,
+		"status":             incoming.Status,
+		"avatar":             incoming.Avatar,
 	}
 	// Only overwrite user_name when the incoming value is non-empty,
 	// otherwise a logout (guest heartbeat) would wipe the linked username.
@@ -157,6 +169,12 @@ func (Visitor) GetAllVisitors() ([]Visitor, error) {
 	var visitors []Visitor
 	err := DB.Order("last_seen desc").Find(&visitors).Error
 	return visitors, err
+}
+
+func (VisitorSummary) GetAllSummaries() ([]VisitorSummary, error) {
+	var summaries []VisitorSummary
+	err := DB.Order("date desc").Find(&summaries).Error
+	return summaries, err
 }
 
 func (visitor *Visitor) AddDuration(duration int64) error {

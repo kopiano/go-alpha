@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -19,6 +20,7 @@ type AuthController interface {
 	Register(ctx *gin.Context)
 	Me(ctx *gin.Context)
 	Logout(ctx *gin.Context)
+	SettingUser(ctx *gin.Context)
 }
 
 type authController struct{}
@@ -75,6 +77,18 @@ func (c *authController) Login(ctx *gin.Context) {
 		return
 	}
 
+	// Record this login as a page view
+	goCtx := context.Background()
+	today := time.Now().Format("2006-01-02")
+	models.RDB.Incr(goCtx, fmt.Sprintf("visit:pv:%s", today))
+	models.RDB.Incr(goCtx, "visit:pv:total")
+	var uv int64
+	models.DB.Model(&models.Visitor{}).
+		Where("DATE(last_seen) = ?", today).
+		Count(&uv)
+	pv, _ := models.RDB.Get(goCtx, fmt.Sprintf("visit:pv:%s", today)).Int64()
+	models.VisitorSummary{}.Upsert(today, uv, pv)
+
 	// update status to active on login
 	models.DB.Model(user).Update("status", "active")
 
@@ -102,6 +116,102 @@ func (c *authController) Logout(ctx *gin.Context) {
 	slog.Info("Logout update", "id", id, "rows_affected", result.RowsAffected)
 
 	response.Success("退出成功", nil, ctx)
+}
+
+func (c *authController) SettingUser(ctx *gin.Context) {
+	userId, _ := ctx.Get("userId")
+	user := models.User{}.GetUserById(int(userId.(uint)))
+	if user.ID == 0 {
+		response.Failed("用户不存在", ctx)
+		return
+	}
+
+	// Support both JSON body and multipart/form-data
+	var username, email, password string
+	contentType := ctx.ContentType()
+
+	if strings.HasPrefix(contentType, "application/json") {
+		var form struct {
+			Username string `json:"username"`
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+		if err := ctx.ShouldBindJSON(&form); err == nil {
+			username = strings.TrimSpace(form.Username)
+			email = strings.TrimSpace(form.Email)
+			password = strings.TrimSpace(form.Password)
+		}
+	} else {
+		username = strings.TrimSpace(ctx.PostForm("username"))
+		email = strings.TrimSpace(ctx.PostForm("email"))
+		password = strings.TrimSpace(ctx.PostForm("password"))
+	}
+
+	updates := map[string]any{}
+	if username != "" && username != user.Username {
+		existing := models.User{}.GetUserByName(username)
+		if existing.ID != 0 {
+			response.Failed("用户名已存在", ctx)
+			return
+		}
+		updates["username"] = username
+	}
+	if email != "" {
+		updates["email"] = email
+	}
+	if password != "" {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			response.Failed("密码加密失败", ctx)
+			return
+		}
+		updates["password"] = string(hashed)
+	}
+
+	// Handle avatar upload (form-data only)
+	file, err := ctx.FormFile("avatar")
+	if err == nil {
+		if err := os.MkdirAll(avatarDir, 0755); err != nil {
+			slog.Warn("SettingUser: MkdirAll failed", "error", err)
+		} else {
+			ext := filepath.Ext(file.Filename)
+			if ext == "" {
+				ext = ".jpg"
+			}
+			filename := fmt.Sprintf("avatar-%d%s", user.ID, ext)
+			savePath := filepath.Join(avatarDir, filename)
+			if err := ctx.SaveUploadedFile(file, savePath); err != nil {
+				slog.Warn("SettingUser: SaveUploadedFile failed", "error", err)
+			} else {
+				updates["avatar"] = "/api/v1/avatar/" + filename
+			}
+		}
+	}
+
+	if len(updates) == 0 {
+		response.Success("没有需要修改的字段", gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+			"email":    user.Email,
+			"avatar":   user.Avatar,
+		}, ctx)
+		return
+	}
+
+	if err := models.DB.Model(&models.User{}).Where("id = ?", user.ID).Updates(updates).Error; err != nil {
+		slog.Error("SettingUser: Update failed", "error", err)
+		response.Failed("更新失败", ctx)
+		return
+	}
+
+	// Return updated user
+	updated := models.User{}.GetUserById(int(user.ID))
+	response.Success("设置已保存", gin.H{
+		"id":       updated.ID,
+		"username": updated.Username,
+		"email":    updated.Email,
+		"avatar":   updated.Avatar,
+	}, ctx)
 }
 
 func (c *authController) Register(ctx *gin.Context) {

@@ -1,0 +1,4 @@
+time="2026-06-30 22:56:00.317" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-06-30 22:56:00.332" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-06-30 22:56:00.463" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-06-30 22:56:00.464" level=INFO source=go-alpha/main.go msg="Server listening on :8080"

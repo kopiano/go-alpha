@@ -45,6 +45,7 @@ func SetupRouter() *gin.Engine {
 		authGroup.POST("/register", authController.Register)
 		authGroup.POST("/logout", middleware.AuthRequired(), authController.Logout)
 		authGroup.GET("/me", middleware.AuthRequired(), authController.Me)
+		authGroup.POST("/setting_user", middleware.AuthRequired(), authController.SettingUser)
 	}
 
 	// User CRUD
@@ -77,6 +78,9 @@ func SetupRouter() *gin.Engine {
 	r.POST("/api/v1/visit", controller.RecordVisit)
 	r.POST("/api/v1/visit/heartbeat", controller.VisitorHeartbeat)
 	r.GET("/api/v1/visitor", controller.GetVisitor)
+	r.GET("/api/v1/visitor_daily", controller.VisitorDaily)
+	r.GET("/api/v1/visitor_pv_uv", controller.VisitorPvUv)
+
 
 	// Doc
 	docGroup := r.Group("/api/v1/doc")

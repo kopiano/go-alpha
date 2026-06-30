@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"io"
 	"log/slog"
 	"os"
 	"time"
@@ -36,7 +37,17 @@ func init() {
 		},
 	}
 
-	handler := slog.NewTextHandler(os.Stdout, opts)
+	// 同时输出到 stdout 和根目录日志文件 app.log
+	logFile, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		// 文件打开失败时只输出到 stdout
+		handler := slog.NewTextHandler(os.Stdout, opts)
+		slog.SetDefault(slog.New(handler))
+		return
+	}
+
+	multiWriter := io.MultiWriter(os.Stdout, logFile)
+	handler := slog.NewTextHandler(multiWriter, opts)
 	slog.SetDefault(slog.New(handler))
 }
 

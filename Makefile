@@ -9,3 +9,7 @@ docker-build:
 # 只重建后端代码，不重建mysql, redis
 docker-rebuild:
 	@docker compose up -d --build backend
+
+# 重建backend，清空mysql，redis数据库重建
+docker-restart:
+	@docker compose down -v && docker compose up -d --build

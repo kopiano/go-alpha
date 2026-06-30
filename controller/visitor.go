@@ -28,20 +28,21 @@ type ipLocation struct {
 }
 
 type visitForm struct {
-	VisitorID string `json:"visitor_id" binding:"required"`
-	Duration  int64  `json:"duration"`
-	OS        string `json:"os"`
-	Browser   string `json:"browser"`
-	Device    string `json:"device"`
-	UserAgent string `json:"user_agent"`
-	PageURL   string `json:"page_url"`
-	Referrer  string `json:"referrer"`
-	Country   string `json:"country"`
-	City      string `json:"city"`
-	Location  string `json:"location"`
-	Status    string `json:"status"`
-	UserName  string `json:"user_name"`
-	Avatar    string `json:"avatar"`
+	VisitorID         string `json:"visitor_id" binding:"required"`
+	DeviceFingerprint string `json:"device_fingerprint"`
+	Duration          int64  `json:"duration"`
+	OS                string `json:"os"`
+	Browser           string `json:"browser"`
+	Device            string `json:"device"`
+	UserAgent         string `json:"user_agent"`
+	PageURL           string `json:"page_url"`
+	Referrer          string `json:"referrer"`
+	Country           string `json:"country"`
+	City              string `json:"city"`
+	Location          string `json:"location"`
+	Status            string `json:"status"`
+	UserName          string `json:"user_name"`
+	Avatar            string `json:"avatar"`
 }
 
 type visitorItem struct {
@@ -319,6 +320,8 @@ func RecordVisit(c *gin.Context) {
 
 	visitor := models.Visitor{
 		VisitorID: visitorID,
+			DeviceFingerprint: strings.TrimSpace(form.DeviceFingerprint),
+
 		IP:        fmt.Sprint(locationData["ip"]),
 		Country:   country,
 		City:      city,
@@ -337,8 +340,13 @@ func RecordVisit(c *gin.Context) {
 		return
 	}
 
-	// Persist daily visitor to MySQL
-	models.VisitorSummary{}.UpsertDaily(today, visitorID)
+	// Persist today's UV/PV
+	var todayUV int64
+	models.DB.Model(&models.Visitor{}).
+		Where("DATE(last_seen) = ?", today).
+		Count(&todayUV)
+	todayPV, _ := models.RDB.Get(ctx, fmt.Sprintf("visit:pv:%s", today)).Int64()
+	models.VisitorSummary{}.Upsert(today, todayUV, todayPV)
 
 
 	data := gin.H{
@@ -402,9 +410,41 @@ func VisitorHeartbeat(c *gin.Context) {
 }
 
 // GetVisitor 统一从 MySQL 读，Redis 只做缓存加速
+// Query params: visitor_id, fingerprint, ip — used to identify current visitor
 func GetVisitor(c *gin.Context) {
 	ctx := context.Background()
 	today := time.Now().Format("2006-01-02")
+
+	// —— Identify current visitor via query params ——
+	visitorID := c.Query("visitor_id")
+	fingerprint := c.Query("fingerprint")
+	clientIP := c.Query("ip")
+
+	var currentVisitor *models.Visitor
+	if visitorID != "" || fingerprint != "" {
+		// 1) Try visitor_id
+		if visitorID != "" {
+			var v models.Visitor
+			if err := models.DB.Where("visitor_id = ?", visitorID).First(&v).Error; err == nil {
+				currentVisitor = &v
+			}
+		}
+		// 2) Fallback: fingerprint + IP
+		if currentVisitor == nil && fingerprint != "" && clientIP != "" {
+			var v models.Visitor
+			if err := models.DB.Where("device_fingerprint = ? AND ip = ?", fingerprint, clientIP).First(&v).Error; err == nil {
+				currentVisitor = &v
+			}
+		}
+		// 3) Fallback: fingerprint alone
+		if currentVisitor == nil && fingerprint != "" {
+			var v models.Visitor
+			if err := models.DB.Where("device_fingerprint = ?", fingerprint).First(&v).Error; err == nil {
+				currentVisitor = &v
+			}
+		}
+	}
+
 	visitors, visitorsErr := models.Visitor{}.GetAllVisitors()
 	if visitorsErr != nil {
 		slog.Error("Visitor.GetAllVisitors failed", "error", visitorsErr)
@@ -412,27 +452,17 @@ func GetVisitor(c *gin.Context) {
 		return
 	}
 
-	// Today's UV = distinct visitors, PV = sum of visit_count
-	var todayUV, todayPV int64
-	models.DB.Model(&models.VisitorSummary{}).
-		Where("date = ?", today).
-		Select("COUNT(DISTINCT visitor_id), COALESCE(SUM(visit_count), 0)").
-		Row().Scan(&todayUV, &todayPV)
+	// Today's UV/PV
+	var daily models.VisitorSummary
+	models.DB.Where("date = ?", today).First(&daily)
 
-	// Week UV = sum of daily unique visitors
+	// Week UV = sum of UV per day
 	weekStart := time.Now().AddDate(0, 0, -6).Format("2006-01-02")
-	type uvRow struct {
-		UV int64
-	}
-	var uvRows []uvRow
-	models.DB.Model(&models.VisitorSummary{}).
-		Where("date >= ?", weekStart).
-		Select("COUNT(DISTINCT visitor_id) as uv").
-		Group("date").
-		Scan(&uvRows)
+	var weekStats []models.VisitorSummary
+	models.DB.Where("date >= ?", weekStart).Find(&weekStats)
 	var weekUV int64
-	for _, r := range uvRows {
-		weekUV += r.UV
+	for _, s := range weekStats {
+		weekUV += s.UV
 	}
 
 	// Total PV/UV — try Redis cache, fall back to MySQL
@@ -441,11 +471,49 @@ func GetVisitor(c *gin.Context) {
 	if err == nil {
 		totalPV, _ = models.RDB.Get(ctx, "visit:cache:total_pv").Int64()
 	} else {
-		models.DB.Model(&models.VisitorSummary{}).Select("COALESCE(SUM(visit_count), 0)").Scan(&totalPV)
+		models.DB.Model(&models.VisitorSummary{}).Select("COALESCE(SUM(pv), 0)").Scan(&totalPV)
 		models.DB.Model(&models.Visitor{}).Select("COUNT(*)").Scan(&totalUV)
 		models.RDB.Set(ctx, "visit:cache:total_uv", totalUV, 10*time.Minute)
 		models.RDB.Set(ctx, "visit:cache:total_pv", totalPV, 10*time.Minute)
 	}
 
-	response.Success("获取统计成功", visitorStatsData(totalPV, totalUV, todayPV, todayUV, weekUV, visitors), c)
+	data := visitorStatsData(totalPV, totalUV, daily.PV, daily.UV, weekUV, visitors)
+	if currentVisitor != nil {
+		data["current_visitor"] = gin.H{
+			"visitor_id": currentVisitor.VisitorID,
+			"ip":         currentVisitor.IP,
+			"country":    currentVisitor.Country,
+			"city":       currentVisitor.City,
+			"location":   currentVisitor.Location,
+			"user_name":  currentVisitor.UserName,
+		}
+	}
+	response.Success("获取统计成功", data, c)
+}
+
+// VisitorDaily 返回 visitor_summary 表所有记录
+func VisitorDaily(c *gin.Context) {
+	var list []models.VisitorSummary
+	if err := models.DB.Order("date desc").Find(&list).Error; err != nil {
+		slog.Error("VisitorDaily failed", "error", err)
+		response.Failed("获取失败", c)
+		return
+	}
+	response.Success("ok", list, c)
+}
+
+// VisitorPvUv 统计所有日期的总 PV 和总 UV
+func VisitorPvUv(c *gin.Context) {
+	var result struct {
+		TotalPV int64 `gorm:"column:total_pv" json:"total_pv"`
+		TotalUV int64 `gorm:"column:total_uv" json:"total_uv"`
+	}
+	if err := models.DB.Model(&models.VisitorSummary{}).
+		Select("COALESCE(SUM(pv), 0) as total_pv, COALESCE(SUM(uv), 0) as total_uv").
+		Scan(&result).Error; err != nil {
+		slog.Error("VisitorPvUv failed", "error", err)
+		response.Failed("获取失败", c)
+		return
+	}
+	response.Success("ok", result, c)
 }
