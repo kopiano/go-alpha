@@ -170,11 +170,11 @@
 likes 请求示例：
 
 ```json
-{ "action": "like" }
+{ "action": "likes" }
 ```
 
 ```json
-{ "action": "unlike" }
+{ "action": "unlikes" }
 ```
 
 

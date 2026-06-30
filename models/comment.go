@@ -14,7 +14,7 @@ type Comment struct {
 	Email       string    `gorm:"type:varchar(255)" json:"email"`
 	Website     string    `gorm:"type:varchar(255)" json:"website"`
 	CommentTime time.Time `gorm:"type:datetime;not null" json:"comment_time"`
-	LikeCount   int64     `gorm:"->;column:like_count;default:0;not null" json:"like_count"`
+	LikeCount   int64     `gorm:"column:like_count;default:0;not null" json:"like_count"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -103,9 +103,9 @@ func (Comment) Unlike(id uint) (*Comment, error) {
 
 func (Comment) React(id uint, action string) (*Comment, error) {
 	switch action {
-	case "like":
+	case "likes":
 		return Comment{}.Like(id)
-	case "unlike":
+	case "unlikes":
 		return Comment{}.Unlike(id)
 	default:
 		return nil, gorm.ErrInvalidData

@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"go-alpha/controller"
+	"go-alpha/logger"
 	"go-alpha/middleware"
 )
 
@@ -18,7 +19,9 @@ var (
 )
 
 func SetupRouter() *gin.Engine {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(logger.GinMiddleware())
+	r.Use(gin.Recovery())
 
 	// Cookie, Session
 	store := cookie.NewStore([]byte("something-very-secret"))
@@ -26,8 +29,6 @@ func SetupRouter() *gin.Engine {
 
 	// CORS
 	r.Use(middleware.CORS())
-
-	userController := controller.User{}
 
 	// Health check
 	r.GET("/ping", func(c *gin.Context) {
@@ -87,6 +88,6 @@ func SetupRouter() *gin.Engine {
 	// Comment
 	r.GET("/api/v1/comment", commentController.ListComments)
 	r.POST("/api/v1/comment", commentController.AddComment)
-	r.POST("/api/v1/comment/:id/likes", commentController.ReactionComment)
+	r.POST("/api/v1/comment/:id/likes", commentController.LikesComment) // 点赞
 	return r
 }

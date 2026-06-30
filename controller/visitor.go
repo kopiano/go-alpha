@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -218,9 +218,9 @@ func buildVisitorStats(visitors []models.Visitor) (int64, int64, []visitorItem) 
 		status := visitor.Status
 		if visitor.LastSeen.After(activeAfter) {
 			activeVisitors++
-			status = "online"
-		} else if status == "" || status == "online" {
-			status = "offline"
+			status = "active"
+		} else {
+			status = "inactive"
 		}
 		items = append(items, visitorItem{
 			VisitorID:       visitor.VisitorID,
@@ -311,7 +311,7 @@ func RecordVisit(c *gin.Context) {
 	osName := firstNonEmpty(form.OS, detectOS(userAgent))
 	browser := firstNonEmpty(form.Browser, detectBrowser(userAgent))
 	device := firstNonEmpty(form.Device, detectDevice(userAgent))
-	status := firstNonEmpty(form.Status, "online")
+	status := firstNonEmpty(form.Status, "active")
 	userName := strings.TrimSpace(form.UserName)
 	avatar := strings.TrimSpace(form.Avatar)
 	if user := currentUser(c); user != nil {
@@ -335,7 +335,7 @@ func RecordVisit(c *gin.Context) {
 	}
 	savedVisitor, err := visitor.UpsertVisit(form.Duration)
 	if err != nil {
-		log.Printf("[error] Visitor.UpsertVisit: %s", err)
+		slog.Error("Visitor.UpsertVisit failed", "error", err)
 		response.Failed("记录访问失败", c)
 		return
 	}
@@ -363,6 +363,7 @@ func RecordVisit(c *gin.Context) {
 type heartbeatForm struct {
 	VisitorID string `json:"visitor_id" binding:"required"`
 	Duration  int64  `json:"duration"`
+	UserName  string `json:"user_name"`
 }
 
 func VisitorHeartbeat(c *gin.Context) {
@@ -380,9 +381,17 @@ func VisitorHeartbeat(c *gin.Context) {
 
 	visitor := models.Visitor{VisitorID: visitorID}
 	if err := visitor.AddDuration(form.Duration); err != nil {
-		log.Printf("[error] Visitor.AddDuration: %s", err)
+		slog.Error("Visitor.AddDuration failed", "error", err)
 		response.Failed("更新访客失败", c)
 		return
+	}
+
+	// If username is provided, also update it (handles guest → login transition
+	// where the heartbeat arrives after the user logged in).
+	if userName := strings.TrimSpace(form.UserName); userName != "" {
+		if err := visitor.UpdateUserName(userName); err != nil {
+			slog.Warn("Visitor.UpdateUserName failed", "error", err)
+		}
 	}
 
 	response.Success("更新成功", gin.H{
@@ -397,7 +406,7 @@ func GetVisitor(c *gin.Context) {
 	today := time.Now().Format("2006-01-02")
 	visitors, visitorsErr := models.Visitor{}.GetAllVisitors()
 	if visitorsErr != nil {
-		log.Printf("[error] Visitor.GetAllVisitors: %s", visitorsErr)
+		slog.Error("Visitor.GetAllVisitors failed", "error", visitorsErr)
 		response.Failed("获取访客失败", c)
 		return
 	}

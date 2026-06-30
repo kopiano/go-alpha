@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/spf13/viper"
@@ -39,11 +39,13 @@ func init() {
 	viper.SetConfigFile("config.yaml")
 
 	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Failed to read config file: %v", err)
+		slog.Error("Failed to read config file", "error", err)
+		os.Exit(1)
 	}
 
 	if err := viper.Unmarshal(&Conf); err != nil {
-		log.Fatalf("Failed to parse config: %v", err)
+		slog.Error("Failed to parse config", "error", err)
+		os.Exit(1)
 	}
 
 	// 环境变量覆盖（用于 Docker 容器）

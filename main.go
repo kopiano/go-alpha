@@ -1,19 +1,23 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 
+	_ "go-alpha/logger"
 	"go-alpha/models"
 	"go-alpha/routes"
 )
 
 func main() {
-	// Initialize databases.
+	slog.Info("Starting server")
+
 	db := models.SetupMySQL()
 	defer models.CloseMysqlDB(db)
 	models.SetupRedis()
 
-	// Setup router and start
 	r := routes.SetupRouter()
-	log.Fatal(r.Run(":8080"))
+	slog.Info("Server listening on :8080")
+	if err := r.Run(":8080"); err != nil {
+		slog.Error("Server failed", "error", err)
+	}
 }

@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,7 +49,7 @@ func (d *DocController) Save(ctx *gin.Context) {
 
 	dir := filepath.Join(docDir, tag)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		log.Printf("[error] Doc.Save: MkdirAll: %s", err)
+		slog.Error("Doc.Save: MkdirAll failed", "error", err)
 		response.Failed("创建目录失败", ctx)
 		return
 	}
@@ -58,7 +58,7 @@ func (d *DocController) Save(ctx *gin.Context) {
 	savePath := filepath.Join(dir, filename)
 
 	if err := os.WriteFile(savePath, []byte(form.Content), 0644); err != nil {
-		log.Printf("[error] Doc.Save: WriteFile: %s", err)
+		slog.Error("Doc.Save: WriteFile failed", "error", err)
 		response.Failed("保存文件失败", ctx)
 		return
 	}
@@ -76,7 +76,7 @@ func (d *DocController) List(ctx *gin.Context) {
 			response.Success("ok", []tagGroup{}, ctx)
 			return
 		}
-		log.Printf("[error] Doc.List: ReadDir: %s", err)
+		slog.Error("Doc.List: ReadDir failed", "error", err)
 		response.Failed("读取目录失败", ctx)
 		return
 	}

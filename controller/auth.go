@@ -2,7 +2,7 @@ package controller
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,7 +70,7 @@ func (c *authController) Login(ctx *gin.Context) {
 
 	token, err := response.GenerateToken(user.ID)
 	if err != nil {
-		log.Printf("[error] Login: GenerateToken: %s", err)
+		slog.Error("Login: GenerateToken failed", "error", err)
 		response.Failed("登录失败", ctx)
 		return
 	}
@@ -144,7 +144,7 @@ func (c *authController) Register(ctx *gin.Context) {
 	// hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("[error] Register: bcrypt: %s", err)
+		slog.Error("Register: bcrypt failed", "error", err)
 		response.Failed("注册失败", ctx)
 		return
 	}
@@ -157,7 +157,7 @@ func (c *authController) Register(ctx *gin.Context) {
 		Status:   "inactive",
 	}
 	if err := models.DB.Create(&newUser).Error; err != nil {
-		log.Printf("[error] Register: Create: %s", err)
+		slog.Error("Register: Create failed", "error", err)
 		response.Failed("注册失败", ctx)
 		return
 	}
@@ -167,7 +167,7 @@ func (c *authController) Register(ctx *gin.Context) {
 	if err == nil {
 		// ensure directory exists
 		if err := os.MkdirAll(avatarDir, 0755); err != nil {
-			log.Printf("[error] Register: MkdirAll: %s", err)
+			slog.Warn("Register: MkdirAll failed", "error", err)
 		} else {
 			ext := filepath.Ext(file.Filename)
 			if ext == "" {
@@ -177,7 +177,7 @@ func (c *authController) Register(ctx *gin.Context) {
 			savePath := filepath.Join(avatarDir, filename)
 
 			if err := ctx.SaveUploadedFile(file, savePath); err != nil {
-				log.Printf("[error] Register: SaveUploadedFile: %s", err)
+				slog.Warn("Register: SaveUploadedFile failed", "error", err)
 			} else {
 				avatarURL := "/api/v1/avatar/" + filename
 				newUser.Avatar = avatarURL
@@ -189,7 +189,7 @@ func (c *authController) Register(ctx *gin.Context) {
 	// generate token
 	token, err := response.GenerateToken(newUser.ID)
 	if err != nil {
-		log.Printf("[error] Register: GenerateToken: %s", err)
+		slog.Error("Register: GenerateToken failed", "error", err)
 		response.Failed("注册失败", ctx)
 		return
 	}

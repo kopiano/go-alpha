@@ -2,8 +2,8 @@ package models
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -30,9 +30,10 @@ func SetupMySQL() *gorm.DB {
 		},
 	})
 	if err != nil {
-		log.Fatalf("Failed to connect MySQL: %v", err)
+		slog.Error("Failed to connect MySQL", "error", err)
+		os.Exit(1)
 	}
-	fmt.Println("MySQL connected successfully")
+	slog.Info("MySQL connected successfully")
 	DB = db
 	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{})
 	return DB
@@ -52,16 +53,17 @@ func SetupRedis() {
 	defer cancel()
 
 	if err := RDB.Ping(ctx).Err(); err != nil {
-		log.Fatalf("Failed to connect Redis: %v", err)
+		slog.Error("Failed to connect Redis", "error", err)
+		os.Exit(1)
 	}
 
-	fmt.Println("Redis connected successfully")
+	slog.Info("Redis connected successfully")
 }
 
 func CloseMysqlDB(db *gorm.DB) {
 	sqlDB, err := DB.DB()
 	if err != nil {
-		log.Fatal("Failed to close connection from database")
+		slog.Error("Failed to close connection from database", "error", err)
 	}
 	sqlDB.SetMaxIdleConns(10)               // 最大空闲连接数
 	sqlDB.SetMaxOpenConns(100)              // 最多可容纳
