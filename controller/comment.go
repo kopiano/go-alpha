@@ -137,8 +137,8 @@ func (CommentController) ReactionComment(c *gin.Context) {
 
 	response.Success(message, gin.H{
 		"id":         comment.ID,
-		"likes":      comment.Likes,
-		"like_count": comment.Likes,
+		"likes":      comment.LikeCount,
+		"like_count": comment.LikeCount,
 	}, c)
 }
 
