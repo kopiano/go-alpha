@@ -2,3 +2,6 @@
 /.idea
 /assets/avatar/
 /assets/docs/
+
+# 微博热搜数据缓存（自动生成，不进 Git）
+data/

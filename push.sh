@@ -11,8 +11,8 @@ if [ "$commit_msg" == "" ]; then
   exit 1
 else
   git commit -m "[commit]: $commit_msg"
-  git pull origin master
-  git push origin master
+  git pull origin main
+  git push origin main
   exit 0
 fi
 echo '>>> ===== ending push... ===== <<<'
