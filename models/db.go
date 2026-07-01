@@ -36,6 +36,13 @@ func SetupMySQL() *gorm.DB {
 	slog.Info("MySQL connected successfully")
 	DB = db
 	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{})
+
+	// Fix historical daily UV data (recalculate from visitor table)
+	err = VisitorSummary{}.FixDailyUV()
+	if err != nil {
+		slog.Warn("FixDailyUV failed", "error", err)
+	}
+
 	return DB
 }
 

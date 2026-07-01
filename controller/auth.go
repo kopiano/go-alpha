@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -76,18 +75,6 @@ func (c *authController) Login(ctx *gin.Context) {
 		response.Failed("登录失败", ctx)
 		return
 	}
-
-	// Record this login as a page view
-	goCtx := context.Background()
-	today := time.Now().Format("2006-01-02")
-	models.RDB.Incr(goCtx, fmt.Sprintf("visit:pv:%s", today))
-	models.RDB.Incr(goCtx, "visit:pv:total")
-	var uv int64
-	models.DB.Model(&models.Visitor{}).
-		Where("DATE(last_seen) = ?", today).
-		Count(&uv)
-	pv, _ := models.RDB.Get(goCtx, fmt.Sprintf("visit:pv:%s", today)).Int64()
-	models.VisitorSummary{}.Upsert(today, uv, pv)
 
 	// update status to active on login
 	models.DB.Model(user).Update("status", "active")

@@ -11,9 +11,9 @@
 go get -u "github.com/gin-gonic/gin"
 go get -u gorm.io/gorm
 go get -u gorm.io/driver/mysql
-go get -u "github.com/redis/go-redis/v9"
-go ger -u "github.com/gin-contrib/cors"
 
+"github.com/redis/go-redis/v9"
+"github.com/gin-contrib/cors"
 "github.com/gin-contrib/sessions"
 "github.com/gin-contrib/sessions/cookie"
 ```
@@ -60,7 +60,7 @@ r.Use(cors.New(cors.Config{
 
 ### linux
 ```shell
-kill -9 $(lsof -t -i:8080)
+kill -9 $(lsof -t -i:8000)
 ```
 
 

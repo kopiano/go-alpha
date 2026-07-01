@@ -177,6 +177,23 @@ func (VisitorSummary) GetAllSummaries() ([]VisitorSummary, error) {
 	return summaries, err
 }
 
+// FixDailyUV recalculates UV for each day in visitor_summary using the visitor table.
+// UV = number of visitors whose last_seen falls on that date.
+func (VisitorSummary) FixDailyUV() error {
+	return DB.Exec(`
+		UPDATE visitor_summary vs
+		SET uv = (
+			SELECT COUNT(*) FROM visitor v
+			WHERE DATE(v.last_seen) = vs.date
+		),
+		updated_at = NOW()
+		WHERE vs.uv != (
+			SELECT COUNT(*) FROM visitor v
+			WHERE DATE(v.last_seen) = vs.date
+		)
+	`).Error
+}
+
 func (visitor *Visitor) AddDuration(duration int64) error {
 	if duration < 0 {
 		duration = 0
