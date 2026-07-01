@@ -5,3 +5,6 @@
 
 # 微博热搜数据缓存（自动生成，不进 Git）
 data/
+
+# Go build cache
+.cache/

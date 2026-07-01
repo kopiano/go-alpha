@@ -1,6 +1,0 @@
-./ast.go
-./bridge.go
-./doc.go
-./kind.go
-./parser.go
-./unmarshaler.go
