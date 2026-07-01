@@ -98,5 +98,20 @@ func SetupRouter() *gin.Engine {
 	// FAQ
 	r.GET("/api/v1/faq", faqController.ListFAQ)
 	r.POST("/api/v1/faq", faqController.AddFAQ)
+
+	// Chat — Conversations
+	chatGroup := r.Group("/api/v1/chat")
+	{
+		chatGroup.GET("/users", controller.GetChatUsers)
+		chatGroup.GET("/conversations", controller.GetConversations)
+		chatGroup.POST("/conversations", controller.CreateConversation)
+		chatGroup.GET("/conversations/:id/messages", controller.GetMessages)
+		chatGroup.PUT("/conversations/:id/read", controller.MarkConversationRead)
+		chatGroup.POST("/messages", controller.PostMessage)
+		chatGroup.PUT("/messages/:id/recall", controller.RecallMessage)
+		chatGroup.GET("/ws", func(c *gin.Context) {
+			controller.HandleWebSocket(c.Writer, c.Request)
+		})
+	}
 	return r
 }
