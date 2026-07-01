@@ -11,7 +11,6 @@ import os
 import re
 import sys
 import time
-from datetime import datetime, timedelta
 
 from urllib.parse import quote
 
@@ -60,10 +59,13 @@ def classify(title: str, note: str = "") -> str:
     return "其他"
 
 
-def data_path(date_str: str) -> str:
-    """获取指定日期（MM-DD）的缓存文件路径"""
+def data_path(date_str: str = "") -> str:
+    """获取当天缓存文件路径，含小时以保留多次快照"""
     os.makedirs(DATA_DIR, exist_ok=True)
-    return os.path.join(DATA_DIR, f"{date_str}.json")
+    if date_str:
+        return os.path.join(DATA_DIR, f"{date_str}.json")
+    ts = time.strftime("%m-%d_%H")
+    return os.path.join(DATA_DIR, f"{ts}.json")
 
 
 def fetch_hot_search() -> list[dict]:
@@ -102,35 +104,29 @@ def print_hot_search(results: list[dict], date_str: str = "") -> None:
         print(f"  {item['rank']:>3}. {cat} {item['title']}{label} {hot}")
 
 
-def cleanup_old_cache():
-    """清理超过5天的缓存文件"""
-    now = datetime.now()
-    keep_dates = {(now - timedelta(days=i)).strftime("%m-%d") for i in range(5)}
-
-    for fpath in glob.glob(os.path.join(DATA_DIR, "*.json")):
-        name = os.path.splitext(os.path.basename(fpath))[0]
-        if name not in keep_dates:
-            os.remove(fpath)
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--json", action="store_true", help="输出 JSON 格式")
     parser.add_argument("--date", type=str, default="", help="日期 MM-DD，为空则爬取实时并缓存")
     args = parser.parse_args()
 
-    today = time.strftime("%m-%d")
-
     if args.date:
-        # 查询历史缓存
+        # 查询历史缓存：先尝试旧格式 MM-DD.json，再找 MM-DD_*.json 快照
         path = data_path(args.date)
-        if not os.path.exists(path):
+        snapshots = sorted(glob.glob(os.path.join(DATA_DIR, f"{args.date}_*.json")))
+        if os.path.exists(path):
+            with open(path) as f:
+                cached = json.load(f)
+            source = "cache"
+        elif snapshots:
+            with open(snapshots[-1]) as f:  # 取最新快照
+                cached = json.load(f)
+            source = "cache"
+        else:
             print(json.dumps({"code": 404, "error": f"没有 {args.date} 的历史数据"}, ensure_ascii=False))
             return
-        with open(path) as f:
-            cached = json.load(f)
         if args.json:
-            print(json.dumps({"code": 200, "date": args.date, "data": cached, "source": "cache"}, ensure_ascii=False))
+            print(json.dumps({"code": 200, "date": args.date, "data": cached, "source": source}, ensure_ascii=False))
         else:
             print_hot_search(cached, args.date)
         return
@@ -138,18 +134,15 @@ def main():
     try:
         results = fetch_hot_search()
 
-        # 缓存到本地
-        path = data_path(today)
+        # 缓存到本地（按小时快照，保留全部历史）
+        path = data_path()
         with open(path, "w") as f:
             json.dump(results, f, ensure_ascii=False)
-
-        # 清理超过5天的旧缓存
-        cleanup_old_cache()
 
         if args.json:
             print(json.dumps({
                 "code": 200,
-                "date": today,
+                "date": time.strftime("%m-%d"),
                 "data": results,
                 "time": time.strftime("%Y-%m-%d %H:%M:%S"),
             }, ensure_ascii=False))
