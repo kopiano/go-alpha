@@ -16,6 +16,7 @@ var (
 	taskController    controller.TaskController    = controller.TaskController{}
 	docController     controller.DocController     = controller.DocController{}
 	commentController controller.CommentController = controller.CommentController{}
+	faqController     controller.FaqController     = controller.FaqController{}
 )
 
 func SetupRouter() *gin.Engine {
@@ -93,5 +94,9 @@ func SetupRouter() *gin.Engine {
 	r.GET("/api/v1/comment", commentController.ListComments)
 	r.POST("/api/v1/comment", commentController.AddComment)
 	r.POST("/api/v1/comment/:id/likes", commentController.LikesComment) // 点赞
+
+	// FAQ
+	r.GET("/api/v1/faq", faqController.ListFAQ)
+	r.POST("/api/v1/faq", faqController.AddFAQ)
 	return r
 }

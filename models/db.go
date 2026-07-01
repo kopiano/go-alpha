@@ -35,12 +35,20 @@ func SetupMySQL() *gorm.DB {
 	}
 	slog.Info("MySQL connected successfully")
 	DB = db
-	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{})
+	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &Faq{})
 
 	// Fix historical daily UV data (recalculate from visitor table)
 	err = VisitorSummary{}.FixDailyUV()
 	if err != nil {
 		slog.Warn("FixDailyUV failed", "error", err)
+	}
+
+	// Seed FAQ data
+	SeedFaqs()
+
+	// Sync FAQ to JSON file
+	if err := SyncFaqToFile(); err != nil {
+		slog.Error("Failed to sync FAQ to file", "error", err)
 	}
 
 	return DB

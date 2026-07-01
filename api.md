@@ -352,3 +352,4 @@ GET 成功响应示例：
 - `region` 是国家地区字符串，前端可直接展示
 - `brower` 保留为兼容字段，建议前端优先使用 `browser`
 - `active_visitors` 按最近 5 分钟有访问记录计算
+
