@@ -292,22 +292,38 @@ func BroadcastMessage(msg models.Message) {
 	fileName, _ := meta["file_name"].(string)
 	fileURL, _ := meta["file_url"].(string)
 
+	// if replied message, get original sender and content
+	var replyToUsername, replyToContent string
+	if msg.ReplyToMessageID != nil && *msg.ReplyToMessageID > 0 {
+		var repliedMsg models.Message
+		if err := models.DB.First(&repliedMsg, *msg.ReplyToMessageID).Error; err == nil {
+			replyToContent = repliedMsg.Content
+			var repliedUser models.User
+			if err := models.DB.First(&repliedUser, repliedMsg.SenderID).Error; err == nil {
+				replyToUsername = repliedUser.Username
+			}
+		}
+	}
+
 	wsMsg := map[string]interface{}{
-		"type":            "message",
-		"id":              msg.ID,
-		"conversation_id": msg.ConversationID,
-		"sender_id":       msg.SenderID,
-		"sender_username": user.Username,
-		"sender_avatar":   user.Avatar,
-		"username":        user.Username,
-		"message_type":    msg.MessageType,
-		"msg_type":        msgTypeStr,
-		"content":         msg.Content,
-		"file_name":       fileName,
-		"file_url":        fileURL,
-		"status":          msg.Status,
-		"created_at":      msg.CreatedAt.Format(time.RFC3339),
-		"time":            msg.CreatedAt.Format("15:04"),
+		"type":               "message",
+		"id":                 msg.ID,
+		"conversation_id":    msg.ConversationID,
+		"sender_id":          msg.SenderID,
+		"sender_username":    user.Username,
+		"sender_avatar":      user.Avatar,
+		"username":           user.Username,
+		"message_type":       msg.MessageType,
+		"msg_type":           msgTypeStr,
+		"content":            msg.Content,
+		"file_name":          fileName,
+		"file_url":           fileURL,
+		"status":             msg.Status,
+		"created_at":         msg.CreatedAt.Format(time.RFC3339),
+		"time":               msg.CreatedAt.Format("15:04"),
+		"reply_to_message_id": msg.ReplyToMessageID,
+		"reply_to_username":   replyToUsername,
+		"reply_to_content":    replyToContent,
 	}
 	data, err := json.Marshal(wsMsg)
 	if err != nil {

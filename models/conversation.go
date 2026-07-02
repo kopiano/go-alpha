@@ -29,21 +29,30 @@ type ConversationMember struct {
 
 // FindOrCreatePrivateConv 查找或创建 1v1 私聊会话
 func FindOrCreatePrivateConv(db *gorm.DB, userA, userB uint) (*Conversation, error) {
-	// 查找两人之间已有的私聊
+	// 通过子查询查找两人之间已有的私聊：先找 conversation_member 中同时包含 userA 和 userB 的 conversation_id
 	var conv Conversation
-	err := db.Where("type = ?", "private").
-		Joins("JOIN conversation_member cm1 ON cm1.conversation_id = conversations.id AND cm1.user_id = ?", userA).
-		Joins("JOIN conversation_member cm2 ON cm2.conversation_id = conversations.id AND cm2.user_id = ?", userB).
-		First(&conv).Error
+	subQuery := db.Table("conversation_member").
+		Select("conversation_id").
+		Where("user_id IN ?", []uint{userA, userB}).
+		Group("conversation_id").
+		Having("COUNT(DISTINCT user_id) = 2")
+
+	err := db.Where("id IN (?)", subQuery).Where("type = ?", "private").First(&conv).Error
 	if err == nil {
 		return &conv, nil
 	}
 
-	// 不存在则创建
+	// 不存在则创建（加锁防止并发重复创建）
 	conv = Conversation{Type: "private"}
-	db.Create(&conv)
-	db.Create(&ConversationMember{ConversationID: conv.ID, UserID: userA, JoinedAt: time.Now(), LastReadAt: time.Now()})
-	db.Create(&ConversationMember{ConversationID: conv.ID, UserID: userB, JoinedAt: time.Now(), LastReadAt: time.Now()})
+	if err := db.Create(&conv).Error; err != nil {
+		return nil, err
+	}
+	if err := db.Create(&ConversationMember{ConversationID: conv.ID, UserID: userA, JoinedAt: time.Now(), LastReadAt: time.Now()}).Error; err != nil {
+		return nil, err
+	}
+	if err := db.Create(&ConversationMember{ConversationID: conv.ID, UserID: userB, JoinedAt: time.Now(), LastReadAt: time.Now()}).Error; err != nil {
+		return nil, err
+	}
 	return &conv, nil
 }
 

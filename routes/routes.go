@@ -64,6 +64,7 @@ func SetupRouter() *gin.Engine {
 	// Hot search
 	r.GET("/api/v1/hot_search", controller.HotSearch)
 		r.GET("/api/v1/36kr", controller.Kr36Hot)
+			r.GET("/api/v1/weather", controller.GetWeather)
 
 	// Task
 	taskGroup := r.Group("/api/v1")

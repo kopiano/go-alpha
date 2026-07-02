@@ -120,12 +120,13 @@ func GetMessages(c *gin.Context) {
 // 发送消息：支持 conversation_id 或 recipient_id，自动创建会话
 func PostMessage(c *gin.Context) {
 	var body struct {
-		ConversationID uint   `json:"conversation_id"`
-		RecipientID    uint   `json:"recipient_id"`
-		MessageType    int    `json:"message_type"`
-		Content        string `json:"content"`
-		FileName       string `json:"file_name"`
-		FileURL        string `json:"file_url"`
+		ConversationID   uint   `json:"conversation_id"`
+		RecipientID      uint   `json:"recipient_id"`
+		MessageType      int    `json:"message_type"`
+		Content          string `json:"content"`
+		FileName         string `json:"file_name"`
+		FileURL          string `json:"file_url"`
+		ReplyToMessageID uint   `json:"reply_to_message_id"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.Content == "" {
 		response.Failed("content is required", c)
@@ -163,13 +164,20 @@ func PostMessage(c *gin.Context) {
 		})
 	}
 
+	// 处理回复
+	var replyToID *uint
+	if body.ReplyToMessageID > 0 {
+		replyToID = &body.ReplyToMessageID
+	}
+
 	msg := models.Message{
-		ConversationID: convID,
-		SenderID:       senderID,
-		MessageType:    body.MessageType,
-		Content:        body.Content,
-		Metadata:       meta,
-		Status:         models.StatusActive,
+		ConversationID:   convID,
+		SenderID:         senderID,
+		MessageType:      body.MessageType,
+		Content:          body.Content,
+		Metadata:         meta,
+		Status:           models.StatusActive,
+		ReplyToMessageID: replyToID,
 	}
 
 	if err := models.SaveMessage(models.DB, &msg); err != nil {
