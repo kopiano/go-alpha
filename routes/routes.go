@@ -99,16 +99,20 @@ func SetupRouter() *gin.Engine {
 	r.GET("/api/v1/faq", faqController.ListFAQ)
 	r.POST("/api/v1/faq", faqController.AddFAQ)
 
-	// Chat — Conversations
+	// Chat — Compatibility (old frontend)
+	r.GET("/api/v1/chat", controller.GetChatCompat)
+	r.POST("/api/v1/chat", middleware.AuthRequired(), controller.PostChatCompat)
+
+	// Chat — New conversation system
 	chatGroup := r.Group("/api/v1/chat")
 	{
 		chatGroup.GET("/users", controller.GetChatUsers)
-		chatGroup.GET("/conversations", controller.GetConversations)
-		chatGroup.POST("/conversations", controller.CreateConversation)
+		chatGroup.GET("/conversations", middleware.AuthRequired(), controller.GetConversations)
+		chatGroup.POST("/conversations", middleware.AuthRequired(), controller.CreateConversation)
 		chatGroup.GET("/conversations/:id/messages", controller.GetMessages)
-		chatGroup.PUT("/conversations/:id/read", controller.MarkConversationRead)
-		chatGroup.POST("/messages", controller.PostMessage)
-		chatGroup.PUT("/messages/:id/recall", controller.RecallMessage)
+		chatGroup.PUT("/conversations/:id/read", middleware.AuthRequired(), controller.MarkConversationRead)
+		chatGroup.POST("/messages", middleware.AuthRequired(), controller.PostMessage)
+		chatGroup.PUT("/messages/:id/recall", middleware.AuthRequired(), controller.RecallMessage)
 		chatGroup.GET("/ws", func(c *gin.Context) {
 			controller.HandleWebSocket(c.Writer, c.Request)
 		})

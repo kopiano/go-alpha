@@ -7,14 +7,17 @@ import (
 )
 
 type User struct {
-	gorm.Model
-	Username    string     `gorm:"type:varchar(100);not null" json:"username"`
-	Email       string     `gorm:"type:varchar(100)" json:"email"`
-	Password    string     `gorm:"type:varchar(100);not null" json:"-"` // 无需显示
-	Website     string     `gorm:"type:varchar(100)" json:"website"`
-	Status      string     `gorm:"type:varchar(100);default:inactive" json:"status"`
-	Avatar      string     `gorm:"type:varchar(255);default:null" json:"avatar"`    // 允许默认头像
-	LastLoginAt *time.Time `gorm:"type:datetime;default:null" json:"last_login_at"` // 最后登录日期，注册日期为Create_at
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+	Username    string         `gorm:"type:varchar(100);not null" json:"username"`
+	Email       string         `gorm:"type:varchar(100)" json:"email"`
+	Password    string         `gorm:"type:varchar(100);not null" json:"-"`
+	Website     string         `gorm:"type:varchar(100)" json:"website"`
+	Status      string         `gorm:"type:varchar(100);default:inactive" json:"status"`
+	Avatar      string         `gorm:"type:varchar(255);default:null" json:"avatar"`
+	LastLoginAt *time.Time     `gorm:"type:datetime;default:null" json:"last_login_at"`
 }
 
 func (User) GetAllUsers() *[]User {

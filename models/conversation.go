@@ -32,8 +32,8 @@ func FindOrCreatePrivateConv(db *gorm.DB, userA, userB uint) (*Conversation, err
 	// 查找两人之间已有的私聊
 	var conv Conversation
 	err := db.Where("type = ?", "private").
-		Joins("JOIN conversation_members cm1 ON cm1.conversation_id = conversations.id AND cm1.user_id = ?", userA).
-		Joins("JOIN conversation_members cm2 ON cm2.conversation_id = conversations.id AND cm2.user_id = ?", userB).
+		Joins("JOIN conversation_member cm1 ON cm1.conversation_id = conversations.id AND cm1.user_id = ?", userA).
+		Joins("JOIN conversation_member cm2 ON cm2.conversation_id = conversations.id AND cm2.user_id = ?", userB).
 		First(&conv).Error
 	if err == nil {
 		return &conv, nil
@@ -42,8 +42,8 @@ func FindOrCreatePrivateConv(db *gorm.DB, userA, userB uint) (*Conversation, err
 	// 不存在则创建
 	conv = Conversation{Type: "private"}
 	db.Create(&conv)
-	db.Create(&ConversationMember{ConversationID: conv.ID, UserID: userA, JoinedAt: time.Now()})
-	db.Create(&ConversationMember{ConversationID: conv.ID, UserID: userB, JoinedAt: time.Now()})
+	db.Create(&ConversationMember{ConversationID: conv.ID, UserID: userA, JoinedAt: time.Now(), LastReadAt: time.Now()})
+	db.Create(&ConversationMember{ConversationID: conv.ID, UserID: userB, JoinedAt: time.Now(), LastReadAt: time.Now()})
 	return &conv, nil
 }
 
@@ -51,7 +51,7 @@ func FindOrCreatePrivateConv(db *gorm.DB, userA, userB uint) (*Conversation, err
 func GetUserConversations(db *gorm.DB, userID uint) ([]Conversation, error) {
 	var conversations []Conversation
 	err := db.Where("id IN (?)",
-		db.Table("conversation_members").Select("conversation_id").Where("user_id = ?", userID),
+		db.Table("conversation_member").Select("conversation_id").Where("user_id = ?", userID),
 	).Preload("Members").Order("updated_at DESC").Find(&conversations).Error
 	return conversations, err
 }

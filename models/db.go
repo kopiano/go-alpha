@@ -37,6 +37,14 @@ func SetupMySQL() *gorm.DB {
 	DB = db
 	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &Faq{}, &Conversation{}, &ConversationMember{}, &Message{})
 
+	// 删除 messages 表中已从模型移除的冗余列（GORM AutoMigrate 不会自动删列）
+	if DB.Migrator().HasColumn(&Message{}, "sender_username") {
+		DB.Migrator().DropColumn(&Message{}, "sender_username")
+	}
+	if DB.Migrator().HasColumn(&Message{}, "sender_avatar") {
+		DB.Migrator().DropColumn(&Message{}, "sender_avatar")
+	}
+
 	// Fix historical daily UV data (recalculate from visitor table)
 	err = VisitorSummary{}.FixDailyUV()
 	if err != nil {

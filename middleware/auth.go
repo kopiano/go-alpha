@@ -11,7 +11,7 @@ func AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			response.Failed("未登录", c)
+			c.JSON(401, gin.H{"code": 401, "message": "未登录"})
 			c.Abort()
 			return
 		}
@@ -19,7 +19,7 @@ func AuthRequired() gin.HandlerFunc {
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 		claims, err := response.ParseToken(tokenStr)
 		if err != nil {
-			response.Failed("登录已过期", c)
+			c.JSON(401, gin.H{"code": 401, "message": "登录已过期"})
 			c.Abort()
 			return
 		}

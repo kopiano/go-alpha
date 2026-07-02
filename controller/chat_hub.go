@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -245,12 +246,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	avatar := r.URL.Query().Get("avatar")
 
 	var uid uint
-	// 简单解析 user_id（WebSocket 连接时可能未登录）
 	if userID != "" {
-		// 简便起见，暂用 username 的哈希作为标识
-		for _, c := range username {
-			uid = uid*31 + uint(c)
-		}
+		uidStr, _ := strconv.ParseUint(userID, 10, 64)
+		uid = uint(uidStr)
 	}
 
 	client := &Client{
@@ -270,22 +268,46 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 // BroadcastMessage 从 HTTP 接口广播消息到所有 WebSocket 客户端
 func BroadcastMessage(msg models.Message) {
-	// 序列化 metadata
-	metaBytes, _ := json.Marshal(msg.Metadata)
+	var user models.User
+	models.DB.First(&user, msg.SenderID)
+
+	// 映射消息类型到字符串
+	msgTypeStr := "text"
+	switch msg.MessageType {
+	case models.MsgEmoji:
+		msgTypeStr = "emoji"
+	case models.MsgImage:
+		msgTypeStr = "image"
+	case models.MsgFile:
+		msgTypeStr = "file"
+	case models.MsgSystem:
+		msgTypeStr = "system"
+	case models.MsgReply:
+		msgTypeStr = "reply"
+	}
+
+	// 从 metadata 提取文件名和下载地址
+	var meta map[string]interface{}
+	json.Unmarshal(msg.Metadata, &meta)
+	fileName, _ := meta["file_name"].(string)
+	fileURL, _ := meta["file_url"].(string)
 
 	wsMsg := map[string]interface{}{
-		"type":                "message",
-		"id":                  msg.ID,
-		"conversation_id":     msg.ConversationID,
-		"sender_id":           msg.SenderID,
-		"sender_username":     msg.SenderUsername,
-		"sender_avatar":       msg.SenderAvatar,
-		"message_type":        msg.MessageType,
-		"content":             msg.Content,
-		"reply_to_message_id": msg.ReplyToMessageID,
-		"status":              msg.Status,
-		"metadata":            json.RawMessage(metaBytes),
-		"created_at":          msg.CreatedAt.Format(time.RFC3339),
+		"type":            "message",
+		"id":              msg.ID,
+		"conversation_id": msg.ConversationID,
+		"sender_id":       msg.SenderID,
+		"sender_username": user.Username,
+		"sender_avatar":   user.Avatar,
+		"username":        user.Username,
+		"message_type":    msg.MessageType,
+		"msg_type":        msgTypeStr,
+		"content":         msg.Content,
+		"file_name":       fileName,
+		"file_url":        fileURL,
+		"status":          msg.Status,
+		"created_at":      msg.CreatedAt.Format(time.RFC3339),
+		"time":            msg.CreatedAt.Format("15:04"),
 	}
 	data, err := json.Marshal(wsMsg)
 	if err != nil {
