@@ -100,9 +100,6 @@ func SetupRouter() *gin.Engine {
 	r.GET("/api/v1/faq", faqController.ListFAQ)
 	r.POST("/api/v1/faq", faqController.AddFAQ)
 
-	// Chat — Compatibility (old frontend)
-	r.GET("/api/v1/chat", controller.GetChatCompat)
-	r.POST("/api/v1/chat", middleware.AuthRequired(), controller.PostChatCompat)
 
 	// Chat — New conversation system
 	chatGroup := r.Group("/api/v1/chat")
@@ -124,7 +121,7 @@ func SetupRouter() *gin.Engine {
 	transactionGroup.Use(middleware.AuthRequired())
 	{
 		transactionGroup.GET("", transactionController.List)                        // GET  /api/v1/transactions
-			transactionGroup.POST("/filter", transactionController.FilterByMonth)         // POST /api/v1/transactions/filter
+		transactionGroup.POST("/filter", transactionController.FilterByMonth)         // POST /api/v1/transactions/filter
 		transactionGroup.POST("/import", transactionController.ImportCSV)            // POST /api/v1/transactions/import
 		transactionGroup.GET("/summary", transactionController.Summary)             // GET  /api/v1/transactions/summary
 		transactionGroup.GET("/months", transactionController.Months)               // GET  /api/v1/transactions/months

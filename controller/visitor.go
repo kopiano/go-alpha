@@ -16,11 +16,6 @@ import (
 	"go-alpha/response"
 )
 
-type ipLocationResponse struct {
-	CountryName string `json:"country_name"`
-	City        string `json:"city"`
-}
-
 type ipLocation struct {
 	Country  string `json:"country"`
 	City     string `json:"city"`
@@ -61,6 +56,7 @@ type visitorItem struct {
 	Device          string    `json:"device"`
 	Status          string    `json:"status"`
 	UserName        string    `json:"user_name"`
+	VisitCount      int64     `json:"visit_count"`
 	Avatar          string    `json:"avatar"`
 }
 
@@ -88,12 +84,12 @@ func getClientIP(c *gin.Context) string {
 
 func getIPLocation(ip string) ipLocation {
 	client := http.Client{Timeout: 2 * time.Second}
-	url := "https://ipapi.co/json/"
-	if strings.TrimSpace(ip) != "" && !isPrivateIP(ip) {
-		url = fmt.Sprintf("https://ipapi.co/%s/json/", ip)
+	ip = strings.TrimSpace(ip)
+	if ip == "" || isPrivateIP(ip) {
+		return ipLocation{Country: "局域网", Location: "局域网"}
 	}
 
-	resp, err := client.Get(url)
+	resp, err := client.Get(fmt.Sprintf("http://ip-api.com/json/%s?fields=country,city", ip))
 	if err != nil {
 		return ipLocation{}
 	}
@@ -103,27 +99,28 @@ func getIPLocation(ip string) ipLocation {
 		return ipLocation{}
 	}
 
-	var location ipLocationResponse
+	var location struct {
+		Country string `json:"country"`
+		City    string `json:"city"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&location); err != nil {
 		return ipLocation{}
 	}
 
-	country := strings.TrimSpace(location.CountryName)
+	country := strings.TrimSpace(location.Country)
 	city := strings.TrimSpace(location.City)
-	result := ipLocation{
-		Country: country,
-		City:    city,
+	loc := ""
+	switch {
+	case country == "" && city == "":
+		return ipLocation{}
+	case city == "":
+		loc = country
+	case country == "" || country == city:
+		loc = city
+	default:
+		loc = country + " " + city
 	}
-	if country == "" {
-		result.Location = city
-		return result
-	}
-	if city == "" || country == city {
-		result.Location = country
-		return result
-	}
-	result.Location = country + " " + city
-	return result
+	return ipLocation{Country: country, City: city, Location: loc}
 }
 
 func visitorLocationData(c *gin.Context) gin.H {
@@ -239,6 +236,7 @@ func buildVisitorStats(visitors []models.Visitor) (int64, int64, []visitorItem) 
 			Device:          visitor.Device,
 			Status:          status,
 			UserName:        visitor.UserName,
+			VisitCount:      visitor.VisitCount,
 			Avatar:          visitor.Avatar,
 		})
 	}

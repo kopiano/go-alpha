@@ -110,7 +110,7 @@ func (visitor *Visitor) UpsertVisit(duration int64) (*Visitor, error) {
 	// 5) Truly new visitor — insert.
 	visitor.FirstSeen = now
 	visitor.LastSeen = now
-	visitor.TotalBrowseTime = duration
+	visitor.TotalBrowseTime = 0 // 浏览时长只由心跳累加，RecordVisit 不参与
 	visitor.VisitCount = 1
 	return visitor, DB.Create(visitor).Error
 }
@@ -125,7 +125,7 @@ func applyVisitorUpdates(existing *Visitor, incoming *Visitor, duration int64, n
 		"city":               incoming.City,
 		"location":           incoming.Location,
 		"last_seen":          now,
-		"total_browse_time":  existing.TotalBrowseTime + duration,
+		// "total_browse_time" is updated by AddDuration (heartbeat) only
 		"visit_count":        gorm.Expr("visit_count + 1"),
 		"os":                 incoming.OS,
 		"browser":            incoming.Browser,

@@ -77,7 +77,10 @@ func (c *authController) Login(ctx *gin.Context) {
 	}
 
 	// update status to active on login
-	models.DB.Model(user).Update("status", "active")
+	models.DB.Model(user).Updates(map[string]any{
+		"status":        "active",
+		"last_login_at": time.Now(),
+	})
 
 	response.Success("登录成功", gin.H{
 		"token": token,
@@ -87,7 +90,7 @@ func (c *authController) Login(ctx *gin.Context) {
 			"email":         user.Email,
 			"avatar":        user.Avatar,
 			"status":        "active",
-			"last_login_at": user.LastLoginAt,
+			"last_login_at": time.Now(),
 		},
 	}, ctx)
 }
@@ -98,7 +101,7 @@ func (c *authController) Logout(ctx *gin.Context) {
 
 	result := models.DB.Model(&models.User{}).Where("id = ?", id).Updates(map[string]any{
 		"status":        "inactive",
-		"last_login_at": time.Now(),
+		"last_login_at": time.Now().Add(-10 * time.Minute), // 退出后标记为 10 分钟前，立刻离线
 	})
 	slog.Info("Logout update", "id", id, "rows_affected", result.RowsAffected)
 
