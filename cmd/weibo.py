@@ -107,42 +107,14 @@ def print_hot_search(results: list[dict], date_str: str = "") -> None:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--json", action="store_true", help="输出 JSON 格式")
-    parser.add_argument("--date", type=str, default="", help="日期 MM-DD，为空则爬取实时并缓存")
     args = parser.parse_args()
-
-    if args.date:
-        # 查询历史缓存：先尝试旧格式 MM-DD.json，再找 MM-DD_*.json 快照
-        path = data_path(args.date)
-        snapshots = sorted(glob.glob(os.path.join(DATA_DIR, f"{args.date}_*.json")))
-        if os.path.exists(path):
-            with open(path) as f:
-                cached = json.load(f)
-            source = "cache"
-        elif snapshots:
-            with open(snapshots[-1]) as f:  # 取最新快照
-                cached = json.load(f)
-            source = "cache"
-        else:
-            print(json.dumps({"code": 404, "error": f"没有 {args.date} 的历史数据"}, ensure_ascii=False))
-            return
-        if args.json:
-            print(json.dumps({"code": 200, "date": args.date, "data": cached, "source": source}, ensure_ascii=False))
-        else:
-            print_hot_search(cached, args.date)
-        return
 
     try:
         results = fetch_hot_search()
 
-        # 缓存到本地（按小时快照，保留全部历史）
-        path = data_path()
-        with open(path, "w") as f:
-            json.dump(results, f, ensure_ascii=False)
-
         if args.json:
             print(json.dumps({
                 "code": 200,
-                "date": time.strftime("%m-%d"),
                 "data": results,
                 "time": time.strftime("%Y-%m-%d %H:%M:%S"),
             }, ensure_ascii=False))
