@@ -11,12 +11,13 @@ import (
 )
 
 var (
-	authController    controller.AuthController    = controller.NewAuthController()
-	userController    controller.User              = controller.User{}
-	taskController    controller.TaskController    = controller.TaskController{}
-	docController     controller.DocController     = controller.DocController{}
-	commentController controller.CommentController = controller.CommentController{}
-	faqController     controller.FaqController     = controller.FaqController{}
+	authController        controller.AuthController          = controller.NewAuthController()
+	userController        controller.User                    = controller.User{}
+	taskController        controller.TaskController          = controller.TaskController{}
+	docController         controller.DocController           = controller.DocController{}
+	commentController     controller.CommentController       = controller.CommentController{}
+	faqController         controller.FaqController           = controller.FaqController{}
+	transactionController controller.TransactionController   = *controller.NewTransactionController()
 )
 
 func SetupRouter() *gin.Engine {
@@ -117,5 +118,20 @@ func SetupRouter() *gin.Engine {
 			controller.HandleWebSocket(c.Writer, c.Request)
 		})
 	}
+
+	// Transaction
+	transactionGroup := r.Group("/api/v1/transactions")
+	transactionGroup.Use(middleware.AuthRequired())
+	{
+		transactionGroup.GET("", transactionController.List)                        // GET  /api/v1/transactions
+			transactionGroup.POST("/filter", transactionController.FilterByMonth)         // POST /api/v1/transactions/filter
+		transactionGroup.POST("/import", transactionController.ImportCSV)            // POST /api/v1/transactions/import
+		transactionGroup.GET("/summary", transactionController.Summary)             // GET  /api/v1/transactions/summary
+		transactionGroup.GET("/months", transactionController.Months)               // GET  /api/v1/transactions/months
+		transactionGroup.GET("/categories", transactionController.CategoryBreakdown) // GET  /api/v1/transactions/categories
+		transactionGroup.GET("/monthly", transactionController.MonthlyBreakdown)    // GET  /api/v1/transactions/monthly
+		transactionGroup.DELETE("", transactionController.Delete)                   // DELETE /api/v1/transactions
+	}
+
 	return r
 }

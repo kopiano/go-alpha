@@ -35,7 +35,7 @@ func SetupMySQL() *gorm.DB {
 	}
 	slog.Info("MySQL connected successfully")
 	DB = db
-	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &Faq{}, &Conversation{}, &ConversationMember{}, &Message{})
+	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &Faq{}, &Conversation{}, &ConversationMember{}, &Message{}, &Transaction{})
 
 	// 删除 messages 表中已从模型移除的冗余列（GORM AutoMigrate 不会自动删列）
 	if DB.Migrator().HasColumn(&Message{}, "sender_username") {

@@ -35,8 +35,13 @@ func ParseToken(tokenString string) (*Claims, error) {
 		return []byte(jwtSecret), nil
 	})
 
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims, nil
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, jwt.ErrSignatureInvalid
+	}
+	return claims, nil
 }
