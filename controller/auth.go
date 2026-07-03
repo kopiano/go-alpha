@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"encoding/json"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -303,7 +304,17 @@ func (c *authController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// 新用户自动加入团队群聊
+	// 广播新用户注册事件（WebSocket），让在线用户刷新联系人列表
+	wsMsg := map[string]interface{}{
+		"type":     "user_registered",
+		"user_id":  newUser.ID,
+		"username": newUser.Username,
+		"avatar":   newUser.Avatar,
+	}
+	if data, err := json.Marshal(wsMsg); err == nil {
+		ChatHub.broadcast <- data
+	}
+	// 将新用户加入 Team 群组
 	models.AddUserToTeam(models.DB, newUser.ID)
 
 	response.Success("注册成功", gin.H{

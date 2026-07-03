@@ -104,16 +104,13 @@ func SetupRouter() *gin.Engine {
 	// Chat — New conversation system
 	chatGroup := r.Group("/api/v1/chat")
 	{
-		chatGroup.GET("/users", controller.GetChatUsers)
-		chatGroup.GET("/team", controller.GetTeam)
-		// chatGroup.GET("/conversations", middleware.AuthRequired(), controller.GetConversations)
-		chatGroup.GET("/user_info", middleware.AuthRequired(), controller.GetChatUserInfo)
-		chatGroup.POST("/conversations", middleware.AuthRequired(), controller.CreateConversation)
-		chatGroup.GET("/conversations/:id/messages", middleware.AuthRequired(), controller.GetMessages)
-		chatGroup.PUT("/conversations/:id/read", middleware.AuthRequired(), controller.MarkConversationRead)
-		chatGroup.POST("/messages", middleware.AuthRequired(), controller.PostMessage)
-		chatGroup.PUT("/messages/:id/recall", middleware.AuthRequired(), controller.RecallMessage)
-		chatGroup.GET("/ws", func(c *gin.Context) {
+		chatGroup.GET("/user_info", middleware.AuthRequired(), controller.GetChatUserInfo)         // 联系人列表
+		chatGroup.GET("/team", middleware.AuthRequired(), controller.GetTeam)                      // 群聊信息
+		chatGroup.POST("/conversations", middleware.AuthRequired(), controller.CreateConversation) // 获取私聊的会话I，拿到这个id才能加载历史消息和标记已读
+		chatGroup.GET("/:id/messages", middleware.AuthRequired(), controller.GetMessages)          // 加载历史消息
+		chatGroup.POST("/messages", middleware.AuthRequired(), controller.PostMessage)             // 发送消息
+		chatGroup.PUT("/:id/read", middleware.AuthRequired(), controller.MarkConversationRead)     // 标记已读
+		chatGroup.GET("/ws", func(c *gin.Context) {                                                // WebSocket
 			controller.HandleWebSocket(c.Writer, c.Request)
 		})
 	}

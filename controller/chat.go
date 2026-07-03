@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/datatypes"
 
 	"go-alpha/models"
 	"go-alpha/response"
@@ -19,111 +18,50 @@ type ContactInfo struct {
 	Username       string `json:"username"`
 	Avatar         string `json:"avatar"`
 	Online         bool   `json:"online"`
-	ConversationID uint   `json:"conversation_id"`
+	ConversationID string `json:"conversation_id"`
 	LastMsg        string `json:"last_msg"`
 	LastMsgType    int    `json:"last_msg_type"`
 	LastTime       string `json:"last_time"`
 	Unread         int64  `json:"unread"`
 }
 
-// ─── GET /api/v1/chat/conversations ───
-func GetConversations(c *gin.Context) {
-	userID := c.GetUint("userId")
-	if userID == 0 {
-		userID = 1
-	}
-
-	convs, err := models.GetUserConversations(models.DB, userID)
-	if err != nil {
-		response.Failed("Failed to fetch conversations", c)
-		return
-	}
-	if convs == nil {
-		convs = []models.Conversation{}
-	}
-
-	type ConvWithMeta struct {
-		models.Conversation
-		LastMessage *models.MessageWithSender `json:"last_message,omitempty"`
-		UnreadCount int64                      `json:"unread_count"`
-	}
-	result := make([]ConvWithMeta, 0, len(convs))
-	for _, conv := range convs {
-		var lastMsg models.Message
-		models.DB.Where("conversation_id = ? AND status != ?", conv.ID, models.StatusDeleted).
-			Order("created_at DESC").First(&lastMsg)
-
-		var lastMsgWithSender *models.MessageWithSender
-		if lastMsg.ID > 0 {
-			mws := lastMsg.PopulateSender(models.DB)
-			lastMsgWithSender = &mws
-		}
-
-		var lastReadAt time.Time
-		for _, m := range conv.Members {
-			if m.UserID == userID {
-				lastReadAt = m.LastReadAt
-				break
-			}
-		}
-		unread, _ := models.GetUnreadCount(models.DB, conv.ID, userID, lastReadAt)
-
-		result = append(result, ConvWithMeta{
-			Conversation: conv,
-			LastMessage:  lastMsgWithSender,
-			UnreadCount:  unread,
-		})
-	}
-
-	response.Success("ok", gin.H{"conversations": result}, c)
-}
-
-// ─── POST /api/v1/chat/conversations ───
-func CreateConversation(c *gin.Context) {
-	var body struct {
-		UserID uint `json:"user_id"` // 对方用户 ID
-	}
-	if err := c.ShouldBindJSON(&body); err != nil || body.UserID == 0 {
-		response.Failed("user_id is required", c)
-		return
-	}
-
-	currentUserID := c.GetUint("userId")
-	if currentUserID == 0 {
-		currentUserID = 1
-	}
-
-	conv, err := models.FindOrCreatePrivateConv(models.DB, currentUserID, body.UserID)
-	if err != nil {
-		response.Failed("Failed to create conversation", c)
-		return
-	}
-
-	// 清除双方缓存，新联系人立即可见
-	invalidateChatUserInfoCache(currentUserID)
-	invalidateChatUserInfoCache(body.UserID)
-
-	response.Success("ok", conv, c)
-}
-
-// ─── GET /api/v1/chat/conversations/:id/messages ───
+// ─── GET /api/v1/chat/:id/messages ───
+// ─── GET /api/v1/chat/:id/messages ───
 func GetMessages(c *gin.Context) {
-	convID, _ := strconv.Atoi(c.Param("id"))
-	if convID == 0 {
+	convID := c.Param("id")
+	if convID == "" {
 		response.Failed("Invalid conversation ID", c)
 		return
 	}
 
-	// 验证用户是会话成员
 	userID := c.GetUint("userId")
 	if userID > 0 {
-		var count int64
-		models.DB.Model(&models.ConversationMember{}).
-			Where("conversation_id = ? AND user_id = ?", convID, userID).
-			Count(&count)
-		if count == 0 {
-			response.Failed("Not a member of this conversation", c)
-			return
+		// 群聊会话："g_{groupID}" 格式
+		if len(convID) > 2 && convID[:2] == "g_" {
+			groupIDStr := convID[2:]
+			groupID, err := strconv.ParseUint(groupIDStr, 10, 64)
+			if err == nil {
+				memberIDs := models.GetGroupMembers(models.DB, uint(groupID))
+				isMember := false
+				for _, mid := range memberIDs {
+					if mid == userID {
+						isMember = true
+						break
+					}
+				}
+				if !isMember {
+					response.Failed("Not a member of this conversation", c)
+					return
+				}
+			}
+		} else {
+			// 私聊会话
+			userA := models.PrivateConvUserA(convID)
+			userB := models.PrivateConvUserB(convID)
+			if userID != userA && userID != userB {
+				response.Failed("Not a member of this conversation", c)
+				return
+			}
 		}
 	}
 
@@ -135,7 +73,7 @@ func GetMessages(c *gin.Context) {
 		limit = 100
 	}
 
-	msgs, err := models.GetConversationMessages(models.DB, uint(convID), limit, offset)
+	msgs, err := models.GetConversationMessages(models.DB, convID, limit, offset)
 	if err != nil {
 		response.Failed("Failed to fetch messages", c)
 		return
@@ -148,21 +86,27 @@ func GetMessages(c *gin.Context) {
 	response.Success("ok", gin.H{"messages": result}, c)
 }
 
-// ─── POST /api/v1/chat/messages ───
-// 发送消息：支持 conversation_id 或 recipient_id，自动创建会话
 func PostMessage(c *gin.Context) {
 	var body struct {
-		ConversationID   uint   `json:"conversation_id"`
-		RecipientID      uint   `json:"recipient_id"`
-		MessageType      int    `json:"message_type"`
-		Content          string `json:"content"`
-		FileName         string `json:"file_name"`
-		FileURL          string `json:"file_url"`
-		ReplyToMessageID uint   `json:"reply_to_message_id"`
+		ConversationID string `json:"conversation_id"`
+		RecipientID    uint   `json:"recipient_id"`
+		ReceiverID     uint   `json:"receiver_id"`
+		ChatType       string `json:"chat_type"`
+		GroupID        uint   `json:"group_id"`
+		MessageType    int    `json:"message_type"`
+		Content        string `json:"content"`
+		FileName       string `json:"file_name"`
+		FileURL        string `json:"file_url"`
 	}
-	if err := c.ShouldBindJSON(&body); err != nil || body.Content == "" {
-		response.Failed("content is required", c)
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.Failed("invalid request body", c)
 		return
+	}
+	if body.MessageType == 0 || body.MessageType == models.MsgText {
+		if body.Content == "" {
+			response.Failed("content is required for text/reply messages", c)
+			return
+		}
 	}
 
 	senderID := c.GetUint("userId")
@@ -170,46 +114,192 @@ func PostMessage(c *gin.Context) {
 		senderID = 1
 	}
 
-	// 确定 conversation_id：优先使用传入的，否则通过 recipient_id 查找/创建
-	convID := body.ConversationID
-	if convID == 0 && body.RecipientID > 0 {
-		conv, _ := models.FindOrCreatePrivateConv(models.DB, senderID, body.RecipientID)
-		if conv != nil {
-			convID = conv.ID
+	// ── 私聊消息 ──
+	if body.ChatType == "private" {
+		receiverID := body.ReceiverID
+		if receiverID == 0 {
+			receiverID = body.RecipientID
 		}
+		if receiverID == 0 || receiverID == senderID {
+			response.Failed("Invalid receiver", c)
+			return
+		}
+		convID, _ := models.FindOrCreatePrivateConv(models.DB, senderID, receiverID)
+
+		if body.MessageType == 0 {
+			body.MessageType = models.MsgText
+		}
+		if body.Content == "" {
+			switch body.MessageType {
+			case models.MsgImage:
+				body.Content = "[图片]"
+			case models.MsgFile:
+				if body.FileName != "" {
+					body.Content = body.FileName
+				} else {
+					body.Content = "[文件]"
+				}
+			case models.MsgEmoji:
+				body.Content = "[表情]"
+			}
+		}
+
+		msg := models.Message{
+			ConversationID: convID,
+			ChatType:       "private",
+			SenderID:       senderID,
+			ReceiverID:     receiverID,
+			MessageType:    body.MessageType,
+			Content:        body.Content,
+		}
+
+		if err := models.SaveMessage(models.DB, &msg); err != nil {
+			response.Failed("Failed to save message", c)
+			return
+		}
+
+		var sender models.User
+		models.DB.First(&sender, senderID)
+		BroadcastMessageWithSender(msg, sender.Username, sender.Avatar)
+
+		invalidateChatConvCache(convID)
+		invalidateChatUserInfoCache(receiverID)
+
+		response.Success("Message sent", gin.H{
+			"id":              msg.ID,
+			"conversation_id": msg.ConversationID,
+			"chat_type":       "private",
+			"sender_id":       msg.SenderID,
+			"receiver_id":     msg.ReceiverID,
+			"sender_username": sender.Username,
+			"sender_avatar":   sender.Avatar,
+			"message_type":    msg.MessageType,
+			"content":         msg.Content,
+			"status":          msg.Status,
+			"created_at":      msg.CreatedAt,
+			"updated_at":      msg.UpdatedAt,
+		}, c)
+		return
 	}
-	if convID == 0 {
+
+	// ── 群聊消息 ──
+	if body.ChatType == "group" && body.GroupID > 0 {
+		memberIDs := models.GetGroupMembers(models.DB, body.GroupID)
+		isMember := false
+		for _, mid := range memberIDs {
+			if mid == senderID {
+				isMember = true
+				break
+			}
+		}
+		if !isMember {
+			response.Failed("You are not a member of this group", c)
+			return
+		}
+
+		convID := "g_" + strconv.FormatUint(uint64(body.GroupID), 10)
+
+		if body.MessageType == 0 {
+			body.MessageType = models.MsgText
+		}
+		if body.Content == "" {
+			switch body.MessageType {
+			case models.MsgImage:
+				body.Content = "[图片]"
+			case models.MsgFile:
+				if body.FileName != "" {
+					body.Content = body.FileName
+				} else {
+					body.Content = "[文件]"
+				}
+			case models.MsgEmoji:
+				body.Content = "[表情]"
+			}
+		}
+
+		msg := models.Message{
+			ConversationID: convID,
+			ChatType:       "group",
+			SenderID:       senderID,
+			GroupID:        body.GroupID,
+			MessageType:    body.MessageType,
+			Content:        body.Content,
+		}
+
+		if err := models.SaveMessage(models.DB, &msg); err != nil {
+			response.Failed("Failed to save message", c)
+			return
+		}
+
+		var sender models.User
+		models.DB.First(&sender, senderID)
+		BroadcastMessageWithSender(msg, sender.Username, sender.Avatar)
+
+		response.Success("Message sent", gin.H{
+			"id":              msg.ID,
+			"conversation_id": msg.ConversationID,
+			"chat_type":       "group",
+			"group_id":        body.GroupID,
+			"sender_id":       msg.SenderID,
+			"sender_username": sender.Username,
+			"sender_avatar":   sender.Avatar,
+			"message_type":    msg.MessageType,
+			"content":         msg.Content,
+			"status":          1,
+			"created_at":      msg.CreatedAt,
+			"updated_at":      msg.UpdatedAt,
+		}, c)
+		return
+	}
+
+	// ── 私聊消息 ──
+	convID := body.ConversationID
+	if convID == "" && body.RecipientID > 0 {
+		if body.RecipientID == senderID {
+			response.Failed("Cannot send message to yourself", c)
+			return
+		}
+		convID, _ = models.FindOrCreatePrivateConv(models.DB, senderID, body.RecipientID)
+	}
+	if convID == "" {
 		response.Failed("conversation_id or recipient_id is required", c)
+		return
+	}
+
+	userA := models.PrivateConvUserA(convID)
+	userB := models.PrivateConvUserB(convID)
+	if senderID != userA && senderID != userB {
+		response.Failed("You are not a member of this conversation", c)
 		return
 	}
 
 	if body.MessageType == 0 {
 		body.MessageType = models.MsgText
 	}
-
-	// 构建 metadata
-	var meta datatypes.JSON
-	if body.FileName != "" || body.FileURL != "" {
-		meta, _ = json.Marshal(map[string]string{
-			"file_name": body.FileName,
-			"file_url":  body.FileURL,
-		})
+	if body.Content == "" {
+		switch body.MessageType {
+		case models.MsgImage:
+			body.Content = "[图片]"
+		case models.MsgFile:
+			if body.FileName != "" {
+				body.Content = body.FileName
+			} else {
+				body.Content = "[文件]"
+			}
+		case models.MsgEmoji:
+			body.Content = "[表情]"
+		}
 	}
 
-	// 处理回复
-	var replyToID *uint
-	if body.ReplyToMessageID > 0 {
-		replyToID = &body.ReplyToMessageID
-	}
+	recipientID := models.PrivateConvRecipient(senderID, convID)
 
 	msg := models.Message{
-		ConversationID:   convID,
-		SenderID:         senderID,
-		MessageType:      body.MessageType,
-		Content:          body.Content,
-		Metadata:         meta,
-		Status:           models.StatusActive,
-		ReplyToMessageID: replyToID,
+		ConversationID: convID,
+		ChatType:       "private",
+		SenderID:       senderID,
+		ReceiverID:     recipientID,
+		MessageType:    body.MessageType,
+		Content:        body.Content,
 	}
 
 	if err := models.SaveMessage(models.DB, &msg); err != nil {
@@ -217,18 +307,10 @@ func PostMessage(c *gin.Context) {
 		return
 	}
 
-	// 更新会话时间
-	models.DB.Model(&models.Conversation{}).Where("id = ?", convID).
-		Update("updated_at", time.Now())
-
-	// 查询发送者信息（一次查询，广播 + 响应共用）
 	var sender models.User
 	models.DB.First(&sender, senderID)
-
-	// 广播消息（避免 BroadcastMessage 再查一次 DB）
 	BroadcastMessageWithSender(msg, sender.Username, sender.Avatar)
 
-	// 清除相关用户信息缓存，使下次 /user_info 请求获取最新数据
 	invalidateChatConvCache(convID)
 	if body.RecipientID > 0 {
 		invalidateChatUserInfoCache(body.RecipientID)
@@ -242,152 +324,69 @@ func PostMessage(c *gin.Context) {
 		"sender_avatar":   sender.Avatar,
 		"message_type":    msg.MessageType,
 		"content":         msg.Content,
-		"status":          msg.Status,
+		"status":          1,
 		"created_at":      msg.CreatedAt,
 		"updated_at":      msg.UpdatedAt,
 	}, c)
 }
 
-// ─── PUT /api/v1/chat/messages/:id/recall ───
-func RecallMessage(c *gin.Context) {
-	msgID, _ := strconv.Atoi(c.Param("id"))
-	senderID := c.GetUint("userId")
-	if senderID == 0 {
-		senderID = 1
-	}
-
-	if err := models.RecallMessage(models.DB, uint(msgID), senderID); err != nil {
-		response.Failed("Failed to recall message", c)
-		return
-	}
-
-	// 广播撤回事件
-	data, _ := json.Marshal(gin.H{
-		"type":    "recall",
-		"msg_id":  msgID,
-		"user_id": senderID,
-	})
-	ChatHub.broadcast <- data
-
-	response.Success("Message recalled", nil, c)
-}
-
-// ─── PUT /api/v1/chat/conversations/:id/read ───
-func MarkConversationRead(c *gin.Context) {
-	convID, _ := strconv.Atoi(c.Param("id"))
-	userID := c.GetUint("userId")
-	if userID == 0 {
-		userID = 1
-	}
-
-	models.DB.Model(&models.ConversationMember{}).
-		Where("conversation_id = ? AND user_id = ?", convID, userID).
-		Update("last_read_at", time.Now())
-
-	response.Success("Marked as read", nil, c)
-}
-
-// ─── GET /api/v1/chat/users ───
-func GetChatUsers(c *gin.Context) {
-	var users []models.User
-	models.DB.Select("id, username, email, avatar, status, last_login_at").Find(&users)
-	if users == nil {
-		users = []models.User{}
-	}
-
-	// 5 分钟内活跃的视为在线（不依赖 logout 更新 status）
-	fiveMinAgo := time.Now().Add(-5 * time.Minute)
-	var activeCount int64
-	models.DB.Model(&models.User{}).Where("last_login_at >= ?", fiveMinAgo).Count(&activeCount)
-
-	response.Success("ok", gin.H{"users": users, "active_count": activeCount}, c)
-}
-
-// ─── GET /api/v1/chat/team ───
-// 返回团队群聊信息
-func GetTeam(c *gin.Context) {
-	var conv models.Conversation
-	if err := models.DB.Where("type = ? AND name = ?", "group", "Team").Preload("Members").First(&conv).Error; err != nil {
-		response.Failed("Team conversation not found", c)
-		return
-	}
-
-	type MemberInfo struct {
-		UserID   uint   `json:"user_id"`
-		Username string `json:"username"`
-		Avatar   string `json:"avatar"`
-	}
-	members := make([]MemberInfo, 0, len(conv.Members))
-	for _, m := range conv.Members {
-		var user models.User
-		if models.DB.Select("id, username, avatar").First(&user, m.UserID).Error == nil {
-			members = append(members, MemberInfo{UserID: user.ID, Username: user.Username, Avatar: user.Avatar})
-		}
-	}
-
-	response.Success("ok", gin.H{
-		"id":      conv.ID,
-		"name":    conv.Name,
-		"members": members,
-	}, c)
-}
-
-// ─── GET /api/v1/chat/user_info ───
-// 返回当前用户的联系人列表，含在线状态 / 最新消息 / 未读数
 func GetChatUserInfo(c *gin.Context) {
 	userID := c.GetUint("userId")
 	if userID == 0 {
 		userID = 1
 	}
 
-	// 获取当前用户的所有会话（含成员）
-	convs, err := models.GetUserConversations(models.DB, userID)
-	if err != nil {
-		response.Failed("查询失败", c)
-		return
-	}
-
-	// 收集所有其他参与者 ID → 会话信息
-	type convInfo struct {
-		convID     uint
-		lastReadAt time.Time
-	}
-	otherMap := make(map[uint]*convInfo) // userID → conversation info
-	for _, conv := range convs {
-		for _, m := range conv.Members {
-			if m.UserID == userID {
-				// 记录当前用户在该会话中的 last_read_at
-				if existing, ok := otherMap[userID]; ok {
-					existing.lastReadAt = m.LastReadAt
-				}
-			} else {
-				if existing, ok := otherMap[m.UserID]; !ok {
-					otherMap[m.UserID] = &convInfo{convID: conv.ID, lastReadAt: time.Time{}}
-				} else if existing.convID == 0 {
-					existing.convID = conv.ID
-				}
-			}
-		}
-	}
-	// 补全每个会话中当前用户对应的 last_read_at
-	for _, conv := range convs {
-		for _, m := range conv.Members {
-			if m.UserID == userID {
-				for _, info := range otherMap {
-					if info.convID == conv.ID {
-						info.lastReadAt = m.LastReadAt
-					}
-				}
-			}
+	// 尝试读 Redis 缓存
+	ctx := context.Background()
+	cacheKey := "chat:user_info:" + strconv.Itoa(int(userID))
+	if cached, err := models.RDB.Get(ctx, cacheKey).Result(); err == nil {
+		var data map[string]any
+		if json.Unmarshal([]byte(cached), &data) == nil {
+			response.Success("ok", data, c)
+			return
 		}
 	}
 
-	// 如果没有会话，返回所有用户（不含自己）
-	if len(otherMap) == 0 {
-		var allUsers []struct{ ID uint }
-		models.DB.Model(&models.User{}).Select("id").Where("id != ?", userID).Find(&allUsers)
-		for _, u := range allUsers {
-			otherMap[u.ID] = &convInfo{}
+	// 从 messages 表获取用户参与的所有私聊会话
+	type convSummary struct {
+		convID string
+	}
+	otherMap := make(map[uint]*convSummary) // partnerUserID → summary
+
+	// 查询该用户参与的所有会话（含对方 ID）
+	type rawConv struct {
+		ConversationID string
+		PartnerID      uint
+	}
+	var rawConvs []rawConv
+	// 我发送的消息 → 对方
+	models.DB.Model(&models.Message{}).
+		Select("DISTINCT conversation_id, receiver_id AS partner_id").
+		Where("sender_id = ? AND receiver_id > 0", userID).
+		Scan(&rawConvs)
+	// 对方发给我的消息 → 对方
+	models.DB.Model(&models.Message{}).
+		Select("DISTINCT conversation_id, sender_id AS partner_id").
+		Where("receiver_id = ? AND sender_id != ?", userID, userID).
+		Scan(&rawConvs)
+
+	for _, r := range rawConvs {
+		if r.PartnerID == 0 || r.ConversationID == "" {
+			continue
+		}
+		if _, ok := otherMap[r.PartnerID]; !ok {
+			otherMap[r.PartnerID] = &convSummary{
+				convID: r.ConversationID,
+			}
+		}
+	}
+
+	// 始终包含所有用户（不含自己），方便新注册用户即时展示
+	var allUsers []struct{ ID uint }
+	models.DB.Model(&models.User{}).Select("id").Where("id != ?", userID).Find(&allUsers)
+	for _, u := range allUsers {
+		if _, ok := otherMap[u.ID]; !ok {
+			otherMap[u.ID] = &convSummary{}
 		}
 	}
 
@@ -413,7 +412,6 @@ func GetChatUserInfo(c *gin.Context) {
 			continue
 		}
 
-		// 在线判断：WebSocket 连接存在 或 5 分钟内登录过
 		online := ChatHub.IsUserOnline(uid) || recentOnline[uid]
 
 		lastMsg := ""
@@ -421,8 +419,7 @@ func GetChatUserInfo(c *gin.Context) {
 		lastTime := ""
 		var unread int64
 
-		if info.convID > 0 {
-			// 查询会话中最新一条消息（不限发送者）
+		if info.convID != "" {
 			var latest struct {
 				ID          uint
 				Content     string
@@ -431,13 +428,12 @@ func GetChatUserInfo(c *gin.Context) {
 				SenderID    uint
 			}
 			models.DB.Model(&models.Message{}).
-				Where("conversation_id = ? AND status != ?", info.convID, models.StatusDeleted).
+				Where("conversation_id = ?", info.convID).
 				Order("created_at DESC").Limit(1).
 				Select("id, content, message_type, created_at, sender_id").Scan(&latest)
 			if latest.ID > 0 {
-				// 根据消息类型生成展示文本
 				switch latest.MessageType {
-				case models.MsgText, models.MsgReply:
+				case models.MsgText:
 					lastMsg = latest.Content
 				case models.MsgEmoji:
 					lastMsg = "[表情]"
@@ -445,8 +441,6 @@ func GetChatUserInfo(c *gin.Context) {
 					lastMsg = "[图片]"
 				case models.MsgFile:
 					lastMsg = "[文件]"
-				case models.MsgSystem:
-					lastMsg = "[系统消息]"
 				default:
 					lastMsg = latest.Content
 				}
@@ -454,10 +448,9 @@ func GetChatUserInfo(c *gin.Context) {
 				lastTime = latest.CreatedAt.Format("2006-01-02 15:04:05")
 			}
 
-			// 未读消息数：对方发送的、时间在 last_read_at 之后、状态正常的消息
 			models.DB.Model(&models.Message{}).
-				Where("conversation_id = ? AND sender_id = ? AND status = ? AND created_at > ?",
-					info.convID, uid, models.StatusActive, info.lastReadAt).
+				Where("conversation_id = ? AND sender_id = ? AND receiver_id = ? AND status = 0",
+					info.convID, uid, userID).
 				Count(&unread)
 		}
 
@@ -474,47 +467,38 @@ func GetChatUserInfo(c *gin.Context) {
 		})
 	}
 
-	// 按最后消息时间降序排序（无消息的排在后面）
 	sortByLastTime(result)
 
 	if result == nil {
 		result = []ContactInfo{}
 	}
 
-	// 查找团队群聊
-	var teamConv struct {
-		ID      uint
-		Name    string
+	// 查询 Team 群聊
+	type teamMember struct {
+		UserID   uint   `json:"user_id"`
+		Username string `json:"username"`
+		Avatar   string `json:"avatar"`
 	}
-	models.DB.Raw("SELECT id, name FROM conversation WHERE type = ? AND name = ? LIMIT 1", "group", "Team").Scan(&teamConv)
-	var teamMembers []gin.H
-	if teamConv.ID > 0 {
-		var members []struct {
-			UserID   uint
-			Username string
-			Avatar   string
+	teamInfo := gin.H{"id": 0, "name": "", "members": []teamMember{}}
+	var teamGroup models.Group
+	if err := models.DB.Where("name = ?", "Team").First(&teamGroup).Error; err == nil {
+		memberIDs := models.GetGroupMembers(models.DB, teamGroup.ID)
+		members := make([]teamMember, 0, len(memberIDs))
+		for _, mid := range memberIDs {
+			var u models.User
+			if models.DB.Select("id, username, avatar").First(&u, mid).Error == nil {
+				members = append(members, teamMember{UserID: u.ID, Username: u.Username, Avatar: u.Avatar})
+			}
 		}
-		models.DB.Table("conversation_member").Select("user_id, username, avatar").
-			Joins("JOIN user ON user.id = conversation_member.user_id").
-			Where("conversation_id = ?", teamConv.ID).Scan(&members)
-		for _, m := range members {
-			teamMembers = append(teamMembers, gin.H{
-				"user_id":  m.UserID,
-				"username": m.Username,
-				"avatar":   m.Avatar,
-			})
-		}
+		teamInfo = gin.H{"id": teamGroup.ID, "name": teamGroup.Name, "members": members}
 	}
 
-	response.Success("ok", gin.H{
-		"contacts": result,
-		"total":    len(result),
-		"team": gin.H{
-			"id":      teamConv.ID,
-			"name":    teamConv.Name,
-			"members": teamMembers,
-		},
-	}, c)
+	data := gin.H{"contacts": result, "total": len(result), "team": teamInfo}
+	if jsonData, err := json.Marshal(data); err == nil {
+		models.RDB.Set(ctx, cacheKey, string(jsonData), 5*time.Second)
+	}
+
+	response.Success("ok", data, c)
 }
 
 // sortByLastTime 按 LastTime 降序排序，无消息的排在最后
@@ -544,37 +528,110 @@ func mapKeys[K comparable, V any](m map[K]V) []K {
 }
 
 // invalidateChatUserInfoCache 清除指定用户及其所有会话伙伴的 chat:user_info 缓存
+// 从 messages 表查询会话伙伴（无需 conversation_member 表）
 func invalidateChatUserInfoCache(userID uint) {
 	if models.RDB == nil {
 		return
 	}
-	ctx := context.Background()
+	delKey := func(uid uint) {
+		models.RDB.Del(context.Background(), "chat:user_info:"+strconv.Itoa(int(uid)))
+	}
+
+	delKey(userID)
 
 	var partnerIDs []uint
-	models.DB.Model(&models.ConversationMember{}).
-		Where("conversation_id IN (?)",
-			models.DB.Table("conversation_member").Select("conversation_id").Where("user_id = ?", userID),
-		).
-		Where("user_id != ?", userID).
-		Distinct("user_id").
-		Pluck("user_id", &partnerIDs)
+	models.DB.Model(&models.Message{}).
+		Select("DISTINCT receiver_id").
+		Where("sender_id = ? AND receiver_id > 0", userID).
+		Pluck("receiver_id", &partnerIDs)
+	models.DB.Model(&models.Message{}).
+		Select("DISTINCT sender_id").
+		Where("receiver_id = ? AND sender_id != ?", userID, userID).
+		Pluck("sender_id", &partnerIDs)
 
-	allIDs := append(partnerIDs, userID)
+	for _, uid := range partnerIDs {
+		delKey(uid)
+	}
+}
+
+// invalidateChatConvCache 清除指定会话中所有成员的 chat:user_info 缓存
+// 从 messages 表查询会话成员（无需 conversation_member 表）
+func invalidateChatConvCache(convID string) {
+	if models.RDB == nil {
+		return
+	}
+	ctx := context.Background()
+	var allIDs []uint
+	models.DB.Model(&models.Message{}).
+		Select("DISTINCT sender_id").
+		Where("conversation_id = ?", convID).
+		Pluck("sender_id", &allIDs)
+	models.DB.Model(&models.Message{}).
+		Select("DISTINCT receiver_id").
+		Where("conversation_id = ? AND receiver_id > 0", convID).
+		Pluck("receiver_id", &allIDs)
+
 	for _, uid := range allIDs {
 		models.RDB.Del(ctx, "chat:user_info:"+strconv.Itoa(int(uid)))
 	}
 }
 
-// invalidateChatConvCache 清除指定会话中所有成员的 chat:user_info 缓存
-func invalidateChatConvCache(convID uint) {
-	if models.RDB == nil {
+// ─── GET /api/v1/chat/team ───
+// 获取 Team 群组信息（含成员列表）
+func GetTeam(c *gin.Context) {
+	teamGroup := models.GetTeamGroup(models.DB)
+	if teamGroup == nil {
+		response.Success("ok", gin.H{"id": 0, "name": "", "members": []gin.H{}}, c)
 		return
 	}
-	ctx := context.Background()
-	var memberIDs []uint
-	models.DB.Model(&models.ConversationMember{}).
-		Where("conversation_id = ?", convID).Pluck("user_id", &memberIDs)
-	for _, uid := range memberIDs {
-		models.RDB.Del(ctx, "chat:user_info:"+strconv.Itoa(int(uid)))
+	memberIDs := models.GetGroupMembers(models.DB, teamGroup.ID)
+	type memberInfo struct {
+		UserID   uint   `json:"user_id"`
+		Username string `json:"username"`
+		Avatar   string `json:"avatar"`
 	}
+	members := make([]memberInfo, 0, len(memberIDs))
+	for _, mid := range memberIDs {
+		var u models.User
+		if models.DB.Select("id, username, avatar").First(&u, mid).Error == nil {
+			members = append(members, memberInfo{UserID: u.ID, Username: u.Username, Avatar: u.Avatar})
+		}
+	}
+	response.Success("ok", gin.H{
+		"id":      teamGroup.ID,
+		"name":    teamGroup.Name,
+		"members": members,
+	}, c)
+}
+
+// ─── POST /api/v1/chat/conversations ───
+// 获取或创建与指定用户的私聊会话
+func CreateConversation(c *gin.Context) {
+	var body struct {
+		UserID uint `json:"user_id"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil || body.UserID == 0 {
+		response.Failed("user_id is required", c)
+		return
+	}
+	senderID := c.GetUint("userId")
+	if senderID == 0 || senderID == body.UserID {
+		response.Failed("Invalid user_id", c)
+		return
+	}
+	convID, _ := models.FindOrCreatePrivateConv(models.DB, senderID, body.UserID)
+	response.Success("ok", gin.H{"conversation_id": convID}, c)
+}
+
+// ─── PUT /api/v1/chat/conversations/:id/read ───
+// 标记会话已读
+func MarkConversationRead(c *gin.Context) {
+	convID := c.Param("id")
+	if convID == "" {
+		response.Failed("conversation_id is required", c)
+		return
+	}
+	userID := c.GetUint("userId")
+	models.MarkConversationRead(models.DB, convID, userID)
+	response.Success("ok", gin.H{}, c)
 }

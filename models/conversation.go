@@ -1,66 +1,71 @@
 package models
 
 import (
+	"strconv"
 	"time"
 
 	"gorm.io/gorm"
 )
 
-// Conversation 会话（1v1 或群聊）
+// ─── 会话查询 ──────────────────────────────────────────────
+
+// FindOrCreatePrivateConv 查找或创建私聊会话
+// 无需读写任何额外表：直接计算 deterministic conversation_id
+func FindOrCreatePrivateConv(db *gorm.DB, userA, userB uint) (convID string, err error) {
+	if userA == userB {
+		return "", gorm.ErrRecordNotFound
+	}
+	id := PrivateConvID(userA, userB)
+	return strconv.FormatUint(uint64(id), 10), nil
+}
+
+// GetUserConversations 获取用户的所有会话（从 messages 表推导）
 type Conversation struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	Type      string         `gorm:"type:varchar(20);default:private;not null" json:"type"` // "private" | "group"
-	Name      string         `gorm:"type:varchar(255)" json:"name,omitempty"`               // 群聊名称
-	Avatar    string         `gorm:"type:varchar(500)" json:"avatar,omitempty"`              // 群头像
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-	Members   []ConversationMember `gorm:"foreignKey:ConversationID" json:"members,omitempty"`
+	ID        string    `json:"id"`
+	Type      string    `json:"type"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// ConversationMember 会话成员
-type ConversationMember struct {
-	ID             uint      `gorm:"primaryKey" json:"id"`
-	ConversationID uint      `gorm:"index;not null" json:"conversation_id"`
-	UserID         uint      `gorm:"index;not null" json:"user_id"`
-	LastReadAt     time.Time `json:"last_read_at"` // 最后已读时间
-	JoinedAt       time.Time `json:"joined_at"`
-}
-
-// FindOrCreatePrivateConv 查找或创建 1v1 私聊会话
-func FindOrCreatePrivateConv(db *gorm.DB, userA, userB uint) (*Conversation, error) {
-	// 通过子查询查找两人之间已有的私聊：先找 conversation_member 中同时包含 userA 和 userB 的 conversation_id
-	var conv Conversation
-	subQuery := db.Table("conversation_member").
-		Select("conversation_id").
-		Where("user_id IN ?", []uint{userA, userB}).
-		Group("conversation_id").
-		Having("COUNT(DISTINCT user_id) = 2")
-
-	err := db.Where("id IN (?)", subQuery).Where("type = ?", "private").First(&conv).Error
-	if err == nil {
-		return &conv, nil
-	}
-
-	// 不存在则创建（加锁防止并发重复创建）
-	conv = Conversation{Type: "private"}
-	if err := db.Create(&conv).Error; err != nil {
-		return nil, err
-	}
-	if err := db.Create(&ConversationMember{ConversationID: conv.ID, UserID: userA, JoinedAt: time.Now(), LastReadAt: time.Now()}).Error; err != nil {
-		return nil, err
-	}
-	if err := db.Create(&ConversationMember{ConversationID: conv.ID, UserID: userB, JoinedAt: time.Now(), LastReadAt: time.Now()}).Error; err != nil {
-		return nil, err
-	}
-	return &conv, nil
-}
-
-// GetUserConversations 获取用户的所有会话
 func GetUserConversations(db *gorm.DB, userID uint) ([]Conversation, error) {
-	var conversations []Conversation
-	err := db.Where("id IN (?)",
-		db.Table("conversation_member").Select("conversation_id").Where("user_id = ?", userID),
-	).Preload("Members").Order("updated_at DESC").Find(&conversations).Error
-	return conversations, err
+	type convRow struct {
+		ConversationID string
+		ChatType       string
+		LastMsgTime    time.Time
+	}
+	var rows []convRow
+
+	err := db.Model(&Message{}).
+		Select("conversation_id, chat_type, MAX(created_at) as last_msg_time").
+		Where("(sender_id = ? OR receiver_id = ?)", userID, userID).
+		Group("conversation_id, chat_type").
+		Order("last_msg_time DESC").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]Conversation, 0, len(rows))
+	for _, r := range rows {
+		result = append(result, Conversation{
+			ID:        r.ConversationID,
+			Type:      r.ChatType,
+			UpdatedAt: r.LastMsgTime,
+		})
+	}
+	return result, nil
+}
+
+// GetConversationPartner 获取私聊会话中的对方用户 ID
+func GetConversationPartner(db *gorm.DB, convID string, currentUserID uint) uint {
+	return PrivateConvRecipient(currentUserID, convID)
+}
+
+// GetUnreadCount 获取未读消息数
+func GetUnreadCount(db *gorm.DB, convID string, userID uint) (int64, error) {
+	var count int64
+	err := db.Model(&Message{}).
+		Where("conversation_id = ? AND sender_id != ? AND receiver_id = ? AND status = 0",
+			convID, userID, userID).
+		Count(&count).Error
+	return count, err
 }

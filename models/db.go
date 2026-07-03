@@ -35,9 +35,20 @@ func SetupMySQL() *gorm.DB {
 	}
 	slog.Info("MySQL connected successfully")
 	DB = db
-	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &Faq{}, &Conversation{}, &ConversationMember{}, &Message{}, &Transaction{}, &Weather{})
+	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &Faq{}, &Message{}, &Transaction{}, &Weather{}, &Group{}, &GroupMember{})
 
-	// 删除 messages 表中已从模型移除的冗余列（GORM AutoMigrate 不会自动删列）
+	// Migration: drop old tables (data inlined into messages)
+	if DB.Migrator().HasTable("conversation_read") {
+		DB.Migrator().DropTable("conversation_read")
+	}
+	if DB.Migrator().HasTable("conversation") {
+		DB.Migrator().DropTable("conversation")
+	}
+	if DB.Migrator().HasTable("conversation_member") {
+		DB.Migrator().DropTable("conversation_member")
+	}
+
+	// 为 messages 表补充新字段（如果列不存在，AutoMigrate 会自动添加）
 	if DB.Migrator().HasColumn(&Message{}, "sender_username") {
 		DB.Migrator().DropColumn(&Message{}, "sender_username")
 	}
@@ -49,14 +60,6 @@ func SetupMySQL() *gorm.DB {
 	err = VisitorSummary{}.FixDailyUV()
 	if err != nil {
 		slog.Warn("FixDailyUV failed", "error", err)
-	}
-
-	// Seed FAQ data
-	SeedFaqs()
-
-	// Sync FAQ to JSON file
-	if err := SyncFaqToFile(); err != nil {
-		slog.Error("Failed to sync FAQ to file", "error", err)
 	}
 
 	return DB

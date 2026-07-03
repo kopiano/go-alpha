@@ -23,22 +23,6 @@ func PublishMessage(msg models.Message, senderUsername, senderAvatar string) {
 		msgTypeStr = "image"
 	case models.MsgFile:
 		msgTypeStr = "file"
-	case models.MsgSystem:
-		msgTypeStr = "system"
-	case models.MsgReply:
-		msgTypeStr = "reply"
-	}
-
-	var replyToUsername, replyToContent string
-	if msg.ReplyToMessageID != nil && *msg.ReplyToMessageID > 0 {
-		var repliedMsg models.Message
-		if err := models.DB.First(&repliedMsg, *msg.ReplyToMessageID).Error; err == nil {
-			replyToContent = repliedMsg.Content
-			var repliedUser models.User
-			if err := models.DB.First(&repliedUser, repliedMsg.SenderID).Error; err == nil {
-				replyToUsername = repliedUser.Username
-			}
-		}
 	}
 
 	wsMsg := map[string]interface{}{
@@ -51,10 +35,7 @@ func PublishMessage(msg models.Message, senderUsername, senderAvatar string) {
 		"msg_type":           msgTypeStr,
 		"content":            msg.Content,
 		"conversation_id":    msg.ConversationID,
-		"reply_to_message_id": msg.ReplyToMessageID,
-		"reply_to_username":   replyToUsername,
-		"reply_to_content":    replyToContent,
-		"status":             msg.Status,
+		"status": 1,
 		"created_at":         msg.CreatedAt.Format(time.RFC3339),
 		"time":               msg.CreatedAt.Format("15:04"),
 	}
