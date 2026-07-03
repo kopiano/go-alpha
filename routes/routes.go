@@ -109,7 +109,7 @@ func SetupRouter() *gin.Engine {
 		// chatGroup.GET("/conversations", middleware.AuthRequired(), controller.GetConversations)
 		chatGroup.GET("/user_info", middleware.AuthRequired(), controller.GetChatUserInfo)
 		chatGroup.POST("/conversations", middleware.AuthRequired(), controller.CreateConversation)
-		chatGroup.GET("/conversations/:id/messages", controller.GetMessages)
+		chatGroup.GET("/conversations/:id/messages", middleware.AuthRequired(), controller.GetMessages)
 		chatGroup.PUT("/conversations/:id/read", middleware.AuthRequired(), controller.MarkConversationRead)
 		chatGroup.POST("/messages", middleware.AuthRequired(), controller.PostMessage)
 		chatGroup.PUT("/messages/:id/recall", middleware.AuthRequired(), controller.RecallMessage)

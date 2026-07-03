@@ -114,6 +114,19 @@ func GetMessages(c *gin.Context) {
 		return
 	}
 
+	// 验证用户是会话成员
+	userID := c.GetUint("userId")
+	if userID > 0 {
+		var count int64
+		models.DB.Model(&models.ConversationMember{}).
+			Where("conversation_id = ? AND user_id = ?", convID, userID).
+			Count(&count)
+		if count == 0 {
+			response.Failed("Not a member of this conversation", c)
+			return
+		}
+	}
+
 	limitStr := c.DefaultQuery("limit", "100")
 	offsetStr := c.DefaultQuery("offset", "0")
 	limit, _ := strconv.Atoi(limitStr)
