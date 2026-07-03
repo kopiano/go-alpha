@@ -82,6 +82,9 @@ func (c *authController) Login(ctx *gin.Context) {
 		"last_login_at": time.Now(),
 	})
 
+	// 清除聊天联系人缓存，使对方立即看到上线状态
+	invalidateChatUserInfoCache(user.ID)
+
 	response.Success("登录成功", gin.H{
 		"token": token,
 		"user": gin.H{
@@ -104,6 +107,9 @@ func (c *authController) Logout(ctx *gin.Context) {
 		"last_login_at": time.Now().Add(-10 * time.Minute), // 退出后标记为 10 分钟前，立刻离线
 	})
 	slog.Info("Logout update", "id", id, "rows_affected", result.RowsAffected)
+
+	// 清除聊天联系人缓存，使对方立即看到离线状态
+	invalidateChatUserInfoCache(uint(id))
 
 	response.Success("退出成功", nil, ctx)
 }
@@ -193,6 +199,9 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 		response.Failed("更新失败", ctx)
 		return
 	}
+
+	// 清除聊天联系人缓存，使对方立即看到最新的 username/avatar
+	invalidateChatUserInfoCache(user.ID)
 
 	// Return updated user
 	updated := models.User{}.GetUserById(int(user.ID))

@@ -1,77 +1,13 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"time"
 
 	"go-alpha/models"
 )
-
-// ─── 异步批量消息写入器 ───
-
-// QueuedMsg 待写入的消息
-type QueuedMsg struct {
-	Msg  *models.Message
-	Done chan<- error // 通知调用方写入完成（可选，nil 表示不等待）
-}
-
-var (
-	msgQueue    = make(chan QueuedMsg, 1024)
-	writeTicker = time.NewTicker(100 * time.Millisecond)
-)
-
-func init() {
-	go msgWriter()
-}
-
-// msgWriter 从 channel 读取消息，每 100ms 或满 100 条批量写入 MySQL
-func msgWriter() {
-	batch := make([]*models.Message, 0, 100)
-	doneChans := make([]chan<- error, 0, 100)
-
-	flush := func() {
-		if len(batch) == 0 {
-			return
-		}
-		if err := models.BatchCreateMessages(models.DB, batch); err != nil {
-			slog.Error("Batch insert messages failed", "count", len(batch), "error", err)
-			for _, ch := range doneChans {
-				ch <- err
-			}
-		} else {
-			for _, ch := range doneChans {
-				ch <- nil
-			}
-		}
-		batch = batch[:0]
-		doneChans = doneChans[:0]
-	}
-
-	for {
-		select {
-		case q := <-msgQueue:
-			batch = append(batch, q.Msg)
-			if q.Done != nil {
-				doneChans = append(doneChans, q.Done)
-			}
-			if len(batch) >= 100 {
-				flush()
-			}
-		case <-writeTicker.C:
-			flush()
-		}
-	}
-}
-
-// EnqueueMessage 将消息加入写入队列（非阻塞，队列满时丢弃）
-func EnqueueMessage(msg *models.Message) {
-	select {
-	case msgQueue <- QueuedMsg{Msg: msg}:
-	default:
-		slog.Warn("Message queue full, dropping message", "convID", msg.ConversationID)
-	}
-}
 
 // ─── Redis Pub/Sub 广播 ───
 
@@ -130,15 +66,11 @@ func PublishMessage(msg models.Message, senderUsername, senderAvatar string) {
 	}
 
 	if models.RDB != nil {
-		if err := models.RDB.Publish(msgCtx, redisPubChan, string(data)).Err(); err != nil {
+		if err := models.RDB.Publish(context.Background(), redisPubChan, string(data)).Err(); err != nil {
 			slog.Error("Redis publish failed", "error", err)
 		}
 	}
 }
-
-var msgCtx = msgCtxType{}
-
-type msgCtxType struct{}
 
 // SubscribeMessages 订阅 Redis 频道并将消息推送到本地 Hub
 func SubscribeMessages() {
@@ -146,19 +78,14 @@ func SubscribeMessages() {
 		slog.Warn("Redis not available, Pub/Sub disabled")
 		return
 	}
-	sub := models.RDB.Subscribe(msgCtx, redisPubChan)
+	sub := models.RDB.Subscribe(context.Background(), redisPubChan)
 	ch := sub.Channel()
 
 	slog.Info("Redis Pub/Sub subscribed", "channel", redisPubChan)
 
 	go func() {
 		for msg := range ch {
-			// 解析消息并推送到本地 Hub 客户端
-			var payload map[string]interface{}
-			if err := json.Unmarshal([]byte(msg.Payload), &payload); err != nil {
-				continue
-			}
-			ChatHub.broadcastRaw(payload)
+			ChatHub.broadcast <- []byte(msg.Payload)
 		}
 	}()
 }

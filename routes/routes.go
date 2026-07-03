@@ -11,13 +11,13 @@ import (
 )
 
 var (
-	authController        controller.AuthController          = controller.NewAuthController()
-	userController        controller.User                    = controller.User{}
-	taskController        controller.TaskController          = controller.TaskController{}
-	docController         controller.DocController           = controller.DocController{}
-	commentController     controller.CommentController       = controller.CommentController{}
-	faqController         controller.FaqController           = controller.FaqController{}
-	transactionController controller.TransactionController   = *controller.NewTransactionController()
+	authController        controller.AuthController        = controller.NewAuthController()
+	userController        controller.User                  = controller.User{}
+	taskController        controller.TaskController        = controller.TaskController{}
+	docController         controller.DocController         = controller.DocController{}
+	commentController     controller.CommentController     = controller.CommentController{}
+	faqController         controller.FaqController         = controller.FaqController{}
+	transactionController controller.TransactionController = *controller.NewTransactionController()
 )
 
 func SetupRouter() *gin.Engine {
@@ -63,8 +63,8 @@ func SetupRouter() *gin.Engine {
 
 	// Hot search
 	r.GET("/api/v1/hot_search", controller.HotSearch)
-		r.GET("/api/v1/36kr", controller.Kr36Hot)
-			r.GET("/api/v1/weather", controller.GetWeather)
+	r.GET("/api/v1/36kr", controller.Kr36Hot)
+	r.GET("/api/v1/weather", controller.GetWeather)
 
 	// Task
 	taskGroup := r.Group("/api/v1")
@@ -85,7 +85,6 @@ func SetupRouter() *gin.Engine {
 	r.GET("/api/v1/visitor_daily", controller.VisitorDaily)
 	r.GET("/api/v1/visitor_pv_uv", controller.VisitorPvUv)
 
-
 	// Doc
 	docGroup := r.Group("/api/v1/doc")
 	{
@@ -102,12 +101,12 @@ func SetupRouter() *gin.Engine {
 	r.GET("/api/v1/faq", faqController.ListFAQ)
 	r.POST("/api/v1/faq", faqController.AddFAQ)
 
-
 	// Chat — New conversation system
 	chatGroup := r.Group("/api/v1/chat")
 	{
 		chatGroup.GET("/users", controller.GetChatUsers)
-		chatGroup.GET("/conversations", middleware.AuthRequired(), controller.GetConversations)
+		// chatGroup.GET("/conversations", middleware.AuthRequired(), controller.GetConversations)
+		chatGroup.GET("/user_info", middleware.AuthRequired(), controller.GetChatUserInfo)
 		chatGroup.POST("/conversations", middleware.AuthRequired(), controller.CreateConversation)
 		chatGroup.GET("/conversations/:id/messages", controller.GetMessages)
 		chatGroup.PUT("/conversations/:id/read", middleware.AuthRequired(), controller.MarkConversationRead)
@@ -122,14 +121,14 @@ func SetupRouter() *gin.Engine {
 	transactionGroup := r.Group("/api/v1/transactions")
 	transactionGroup.Use(middleware.AuthRequired())
 	{
-		transactionGroup.GET("", transactionController.List)                        // GET  /api/v1/transactions
-		transactionGroup.POST("/filter", transactionController.FilterByMonth)         // POST /api/v1/transactions/filter
+		transactionGroup.GET("", transactionController.List)                         // GET  /api/v1/transactions
+		transactionGroup.POST("/filter", transactionController.FilterByMonth)        // POST /api/v1/transactions/filter
 		transactionGroup.POST("/import", transactionController.ImportCSV)            // POST /api/v1/transactions/import
-		transactionGroup.GET("/summary", transactionController.Summary)             // GET  /api/v1/transactions/summary
-		transactionGroup.GET("/months", transactionController.Months)               // GET  /api/v1/transactions/months
+		transactionGroup.GET("/summary", transactionController.Summary)              // GET  /api/v1/transactions/summary
+		transactionGroup.GET("/months", transactionController.Months)                // GET  /api/v1/transactions/months
 		transactionGroup.GET("/categories", transactionController.CategoryBreakdown) // GET  /api/v1/transactions/categories
-		transactionGroup.GET("/monthly", transactionController.MonthlyBreakdown)    // GET  /api/v1/transactions/monthly
-		transactionGroup.DELETE("", transactionController.Delete)                   // DELETE /api/v1/transactions
+		transactionGroup.GET("/monthly", transactionController.MonthlyBreakdown)     // GET  /api/v1/transactions/monthly
+		transactionGroup.DELETE("", transactionController.Delete)                    // DELETE /api/v1/transactions
 	}
 
 	return r

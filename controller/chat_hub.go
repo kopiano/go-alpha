@@ -222,6 +222,18 @@ func (h *Hub) broadcastOnlineUsers() {
 	}
 }
 
+// IsUserOnline 检查指定用户是否通过 WebSocket 在线
+func (h *Hub) IsUserOnline(userID uint) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for client := range h.clients {
+		if client.userID == userID {
+			return true
+		}
+	}
+	return false
+}
+
 // ─── 全局 Hub 单例 ──────────────────────────────────────────────
 
 var ChatHub = NewHub()
