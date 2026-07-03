@@ -189,12 +189,25 @@ func PostMessage(c *gin.Context) {
 	models.DB.Model(&models.Conversation{}).Where("id = ?", convID).
 		Update("updated_at", time.Now())
 
-	// 广播
-	BroadcastMessage(msg)
+	// 查询发送者信息（一次查询，广播 + 响应共用）
+	var sender models.User
+	models.DB.First(&sender, senderID)
 
-	// 返回带发送者信息的消息
-	result := msg.PopulateSender(models.DB)
-	response.Success("Message sent", result, c)
+	// 广播消息（避免 BroadcastMessage 再查一次 DB）
+	BroadcastMessageWithSender(msg, sender.Username, sender.Avatar)
+
+	response.Success("Message sent", gin.H{
+		"id":              msg.ID,
+		"conversation_id": msg.ConversationID,
+		"sender_id":       msg.SenderID,
+		"sender_username": sender.Username,
+		"sender_avatar":   sender.Avatar,
+		"message_type":    msg.MessageType,
+		"content":         msg.Content,
+		"status":          msg.Status,
+		"created_at":      msg.CreatedAt,
+		"updated_at":      msg.UpdatedAt,
+	}, c)
 }
 
 // ─── PUT /api/v1/chat/messages/:id/recall ───

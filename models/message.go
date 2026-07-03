@@ -1,6 +1,9 @@
 package models
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"gorm.io/datatypes"
@@ -140,10 +143,64 @@ func PopulateSenderForMessages(db *gorm.DB, msgs []Message) []MessageWithSender 
 	return result
 }
 
+// ─── Redis 缓存 ───
+
+const msgCacheTTL = 5 * time.Minute
+
+func msgCacheKey(convID uint) string {
+	return fmt.Sprintf("chat:messages:%d", convID)
+}
+
+// cacheMessages 将消息列表缓存到 Redis
+func cacheMessages(convID uint, msgs []Message) {
+	if RDB == nil {
+		return
+	}
+	data, err := json.Marshal(msgs)
+	if err != nil {
+		return
+	}
+	ctx := context.Background()
+	RDB.Set(ctx, msgCacheKey(convID), data, msgCacheTTL)
+}
+
+// getCachedMessages 从 Redis 获取缓存的消息列表
+func getCachedMessages(convID uint) ([]Message, bool) {
+	if RDB == nil {
+		return nil, false
+	}
+	ctx := context.Background()
+	data, err := RDB.Get(ctx, msgCacheKey(convID)).Bytes()
+	if err != nil {
+		return nil, false
+	}
+	var msgs []Message
+	if err := json.Unmarshal(data, &msgs); err != nil {
+		return nil, false
+	}
+	return msgs, true
+}
+
+// invalidateMsgCache 清除会话消息缓存
+func invalidateMsgCache(convID uint) {
+	if RDB == nil {
+		return
+	}
+	ctx := context.Background()
+	RDB.Del(ctx, msgCacheKey(convID))
+}
+
 // ─── 数据库操作 ───
 
 // GetConversationMessages 获取会话消息（分页）
 func GetConversationMessages(db *gorm.DB, convID uint, limit, offset int) ([]Message, error) {
+	// 首次页（offset=0, limit=最大）尝试从 Redis 读取缓存
+	if offset == 0 && limit >= 500 {
+		if cached, ok := getCachedMessages(convID); ok {
+			return cached, nil
+		}
+	}
+
 	var msgs []Message
 	err := db.Where("conversation_id = ? AND status != ?", convID, StatusDeleted).
 		Order("created_at DESC").Limit(limit).Offset(offset).Find(&msgs).Error
@@ -154,18 +211,34 @@ func GetConversationMessages(db *gorm.DB, convID uint, limit, offset int) ([]Mes
 	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
 		msgs[i], msgs[j] = msgs[j], msgs[i]
 	}
+
+	// 首次页且数据量不大，写入缓存
+	if offset == 0 && limit >= 500 && len(msgs) > 0 {
+		cacheMessages(convID, msgs)
+	}
+
 	return msgs, nil
 }
 
 // SaveMessage 保存消息
 func SaveMessage(db *gorm.DB, msg *Message) error {
-	return db.Create(msg).Error
+	err := db.Create(msg).Error
+	if err == nil && msg.ConversationID > 0 {
+		invalidateMsgCache(msg.ConversationID)
+	}
+	return err
 }
 
 // RecallMessage 撤回消息
 func RecallMessage(db *gorm.DB, msgID, senderID uint) error {
-	return db.Model(&Message{}).Where("id = ? AND sender_id = ?", msgID, senderID).
+	var msg Message
+	db.First(&msg, msgID)
+	err := db.Model(&Message{}).Where("id = ? AND sender_id = ?", msgID, senderID).
 		Update("status", StatusRecalled).Error
+	if err == nil && msg.ConversationID > 0 {
+		invalidateMsgCache(msg.ConversationID)
+	}
+	return err
 }
 
 // GetUnreadCount 获取未读消息数

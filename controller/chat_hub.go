@@ -58,9 +58,9 @@ func (c *Client) readPump() {
 	}()
 
 	c.conn.SetReadLimit(8192) // 8KB 最大消息
-	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		c.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 		return nil
 	})
 
@@ -95,7 +95,7 @@ func (c *Client) readPump() {
 
 // writePump 将消息从 hub 写入 WebSocket 连接
 func (c *Client) writePump() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
@@ -266,11 +266,8 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	go client.readPump()
 }
 
-// BroadcastMessage 从 HTTP 接口广播消息到所有 WebSocket 客户端
-func BroadcastMessage(msg models.Message) {
-	var user models.User
-	models.DB.First(&user, msg.SenderID)
-
+// BroadcastMessageWithSender 广播消息到所有 WebSocket 客户端（带发送者信息，避免重复查 DB）
+func BroadcastMessageWithSender(msg models.Message, senderUsername, senderAvatar string) {
 	// 映射消息类型到字符串
 	msgTypeStr := "text"
 	switch msg.MessageType {
@@ -292,7 +289,7 @@ func BroadcastMessage(msg models.Message) {
 	fileName, _ := meta["file_name"].(string)
 	fileURL, _ := meta["file_url"].(string)
 
-	// if replied message, get original sender and content
+	// 如果回复了消息，查询原消息的发送者用户名和内容
 	var replyToUsername, replyToContent string
 	if msg.ReplyToMessageID != nil && *msg.ReplyToMessageID > 0 {
 		var repliedMsg models.Message
@@ -310,9 +307,9 @@ func BroadcastMessage(msg models.Message) {
 		"id":                 msg.ID,
 		"conversation_id":    msg.ConversationID,
 		"sender_id":          msg.SenderID,
-		"sender_username":    user.Username,
-		"sender_avatar":      user.Avatar,
-		"username":           user.Username,
+		"sender_username":    senderUsername,
+		"sender_avatar":      senderAvatar,
+		"username":           senderUsername,
 		"message_type":       msg.MessageType,
 		"msg_type":           msgTypeStr,
 		"content":            msg.Content,
@@ -331,4 +328,11 @@ func BroadcastMessage(msg models.Message) {
 		return
 	}
 	ChatHub.broadcast <- data
+}
+
+// BroadcastMessage 从 HTTP 接口广播消息到所有 WebSocket 客户端（保持向后兼容）
+func BroadcastMessage(msg models.Message) {
+	var user models.User
+	models.DB.First(&user, msg.SenderID)
+	BroadcastMessageWithSender(msg, user.Username, user.Avatar)
 }
