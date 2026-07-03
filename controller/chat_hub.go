@@ -58,9 +58,9 @@ func (c *Client) readPump() {
 	}()
 
 	c.conn.SetReadLimit(8192) // 8KB 最大消息
-	c.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	c.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+		c.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 		return nil
 	})
 

@@ -303,6 +303,9 @@ func (c *authController) Register(ctx *gin.Context) {
 		return
 	}
 
+	// 新用户自动加入团队群聊
+	models.AddUserToTeam(models.DB, newUser.ID)
+
 	response.Success("注册成功", gin.H{
 		"token": token,
 		"user": gin.H{

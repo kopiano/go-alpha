@@ -105,6 +105,7 @@ func SetupRouter() *gin.Engine {
 	chatGroup := r.Group("/api/v1/chat")
 	{
 		chatGroup.GET("/users", controller.GetChatUsers)
+		chatGroup.GET("/team", controller.GetTeam)
 		// chatGroup.GET("/conversations", middleware.AuthRequired(), controller.GetConversations)
 		chatGroup.GET("/user_info", middleware.AuthRequired(), controller.GetChatUserInfo)
 		chatGroup.POST("/conversations", middleware.AuthRequired(), controller.CreateConversation)

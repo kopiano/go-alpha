@@ -16,6 +16,9 @@ func main() {
 	defer models.CloseMysqlDB(db)
 	models.SetupRedis()
 
+	// 确保团队群聊存在（所有用户自动加入）
+	models.EnsureTeamConversation(db)
+
 	// 启动定时抓取热搜（每 6 小时）
 	scheduler.StartHotSearchScheduler()
 

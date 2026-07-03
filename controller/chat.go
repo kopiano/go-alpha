@@ -290,6 +290,35 @@ func GetChatUsers(c *gin.Context) {
 	response.Success("ok", gin.H{"users": users, "active_count": activeCount}, c)
 }
 
+// ─── GET /api/v1/chat/team ───
+// 返回团队群聊信息
+func GetTeam(c *gin.Context) {
+	var conv models.Conversation
+	if err := models.DB.Where("type = ? AND name = ?", "group", "Team").Preload("Members").First(&conv).Error; err != nil {
+		response.Failed("Team conversation not found", c)
+		return
+	}
+
+	type MemberInfo struct {
+		UserID   uint   `json:"user_id"`
+		Username string `json:"username"`
+		Avatar   string `json:"avatar"`
+	}
+	members := make([]MemberInfo, 0, len(conv.Members))
+	for _, m := range conv.Members {
+		var user models.User
+		if models.DB.Select("id, username, avatar").First(&user, m.UserID).Error == nil {
+			members = append(members, MemberInfo{UserID: user.ID, Username: user.Username, Avatar: user.Avatar})
+		}
+	}
+
+	response.Success("ok", gin.H{
+		"id":      conv.ID,
+		"name":    conv.Name,
+		"members": members,
+	}, c)
+}
+
 // ─── GET /api/v1/chat/user_info ───
 // 返回当前用户的联系人列表，含在线状态 / 最新消息 / 未读数
 func GetChatUserInfo(c *gin.Context) {
@@ -439,7 +468,40 @@ func GetChatUserInfo(c *gin.Context) {
 		result = []ContactInfo{}
 	}
 
-	response.Success("ok", gin.H{"contacts": result, "total": len(result)}, c)
+	// 查找团队群聊
+	var teamConv struct {
+		ID      uint
+		Name    string
+	}
+	models.DB.Raw("SELECT id, name FROM conversation WHERE type = ? AND name = ? LIMIT 1", "group", "Team").Scan(&teamConv)
+	var teamMembers []gin.H
+	if teamConv.ID > 0 {
+		var members []struct {
+			UserID   uint
+			Username string
+			Avatar   string
+		}
+		models.DB.Table("conversation_member").Select("user_id, username, avatar").
+			Joins("JOIN user ON user.id = conversation_member.user_id").
+			Where("conversation_id = ?", teamConv.ID).Scan(&members)
+		for _, m := range members {
+			teamMembers = append(teamMembers, gin.H{
+				"user_id":  m.UserID,
+				"username": m.Username,
+				"avatar":   m.Avatar,
+			})
+		}
+	}
+
+	response.Success("ok", gin.H{
+		"contacts": result,
+		"total":    len(result),
+		"team": gin.H{
+			"id":      teamConv.ID,
+			"name":    teamConv.Name,
+			"members": teamMembers,
+		},
+	}, c)
 }
 
 // sortByLastTime 按 LastTime 降序排序，无消息的排在最后
