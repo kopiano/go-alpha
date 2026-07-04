@@ -2,9 +2,6 @@
 push:
 	@bash push.sh
 
-cloudflare:
-	@cloudflared tunnel run api-test
-
 # (首次使用)启动服务器
 docker-build:
 	@docker compose up -d	# error先执行: docker builder prune -f
@@ -17,11 +14,13 @@ docker-rebuild:
 docker-restart:
 	@docker compose down -v && docker compose up -d --build
 
+cloudflare:
+	@cloudflared tunnel run api-test
 
-log-50:
-	@docker compose logs --tail=50 backend
-
-log:
-	@docker compose logs backend
+#log-50:
+#	@docker compose logs --tail=50 backend
+#
+#log:
+#	@docker compose logs backend
 
 
