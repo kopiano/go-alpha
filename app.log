@@ -31,3 +31,234 @@ time="2026-07-03 20:03:35.804" level=INFO source=models/db.go msg="MySQL connect
 time="2026-07-03 20:03:35.924" level=ERROR source=models/db.go msg="Failed to connect Redis" error="dial tcp 127.0.0.1:6379: connect: connection refused"
 time="2026-07-03 20:04:05.244" level=INFO source=go-alpha/main.go msg="Starting server"
 time="2026-07-03 20:04:05.244" level=ERROR source=models/db.go msg="Failed to connect MySQL" error="dial tcp 127.0.0.1:3306: connect: connection refused"
+time="2026-07-04 21:25:56.106" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-04 21:25:56.130" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-04 21:25:56.336" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-04 21:25:56.339" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-04 21:25:56.339" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-04 21:25:56.340" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-04 21:26:02.127" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=11989
+time="2026-07-04 21:27:43.403" level=WARN source=logger/gin.go msg=[HTTP] status=404 method=GET path=/ ip=103.172.183.76 took=187.459µs size=-1
+time="2026-07-04 21:27:49.344" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=103.172.183.76 took=14.927167ms size=791
+time="2026-07-04 21:38:53.621" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=1.927208ms size=0
+time="2026-07-04 21:38:59.061" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=67.958µs size=0
+time="2026-07-04 21:38:59.061" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=16.75µs size=0
+time="2026-07-04 21:38:59.084" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=298250
+time="2026-07-04 21:38:59.584" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=46.411958ms size=129
+time="2026-07-04 21:38:59.584" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=46.705208ms size=129
+time="2026-07-04 21:38:59.604" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=541.159958ms size=978
+time="2026-07-04 21:39:00.967" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=5.307208ms size=129
+time="2026-07-04 21:39:01.073" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=2.82ms size=129
+time="2026-07-04 21:39:01.264" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=14.083µs size=0
+time="2026-07-04 21:39:01.720" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=298253
+time="2026-07-04 21:39:01.824" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=104.180625ms size=978
+time="2026-07-04 21:42:14.515" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=122.25µs size=0
+time="2026-07-04 21:42:14.992" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=15.4205ms size=129
+time="2026-07-04 21:42:15.889" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=12.013417ms size=129
+time="2026-07-04 21:42:16.443" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.11275ms size=129
+time="2026-07-04 21:42:16.667" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=16.25µs size=0
+time="2026-07-04 21:42:17.097" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=298449
+time="2026-07-04 21:42:17.404" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=306.970583ms size=978
+time="2026-07-04 21:42:57.244" level=WARN source=logger/gin.go msg=[HTTP] status=403 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=89.083µs size=0
+time="2026-07-04 21:43:00.924" level=WARN source=logger/gin.go msg=[HTTP] status=403 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=25.5µs size=0
+time="2026-07-04 21:43:00.924" level=WARN source=logger/gin.go msg=[HTTP] status=403 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=25.333µs size=0
+time="2026-07-04 21:44:06.806" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=106.333µs size=0
+time="2026-07-04 21:44:06.976" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=11.118584ms size=129
+time="2026-07-04 21:44:11.171" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.463458ms size=129
+time="2026-07-04 21:44:23.720" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=66.458µs size=0
+time="2026-07-04 21:44:23.892" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=11.728292ms size=129
+time="2026-07-04 21:44:23.992" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=9.542µs size=0
+time="2026-07-04 21:44:24.465" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=298576
+time="2026-07-04 21:44:24.809" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=343.818083ms size=978
+time="2026-07-04 21:45:50.144" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=140.583µs size=0
+time="2026-07-04 21:45:50.635" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=9.540667ms size=129
+time="2026-07-04 21:45:52.450" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=7.239375ms size=129
+time="2026-07-04 21:46:04.933" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=29.125µs size=0
+time="2026-07-04 21:46:05.103" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.268583ms size=129
+time="2026-07-04 21:46:05.194" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=15.792µs size=0
+time="2026-07-04 21:46:05.662" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=298677
+time="2026-07-04 21:46:06.004" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=342.5305ms size=978
+time="2026-07-04 21:46:10.158" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=2.649666ms size=129
+time="2026-07-04 21:46:44.219" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=132.666µs size=0
+time="2026-07-04 21:46:44.220" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=25.667µs size=0
+time="2026-07-04 21:46:45.814" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=7.634541ms size=129
+time="2026-07-04 21:46:49.875" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=49.375µs size=0
+time="2026-07-04 21:46:52.376" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.922709ms size=129
+time="2026-07-04 21:46:53.106" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=7.680042ms size=129
+time="2026-07-04 21:47:05.320" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=29.292µs size=0
+time="2026-07-04 21:47:05.320" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=35.125µs size=0
+time="2026-07-04 21:47:05.321" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=36.792µs size=0
+time="2026-07-04 21:47:05.321" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=28.042µs size=0
+time="2026-07-04 21:47:05.771" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=7.401625ms size=129
+time="2026-07-04 21:47:05.771" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=7.496917ms size=129
+time="2026-07-04 21:47:05.780" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=11.829958ms size=129
+time="2026-07-04 21:47:05.780" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=16.52075ms size=129
+time="2026-07-04 21:47:06.004" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=12.785167ms size=129
+time="2026-07-04 21:48:18.059" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=108.292µs size=0
+time="2026-07-04 21:48:18.516" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=7.625416ms size=129
+time="2026-07-04 21:54:43.330" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=855.917µs size=0
+time="2026-07-04 21:54:43.945" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=16.066083ms size=129
+time="2026-07-04 21:54:44.223" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=5.983375ms size=129
+time="2026-07-04 21:54:44.491" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=17.208µs size=0
+time="2026-07-04 21:54:44.944" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299196
+time="2026-07-04 21:54:46.489" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=5.753125ms size=129
+time="2026-07-04 21:54:46.491" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.873208ms size=129
+time="2026-07-04 21:54:46.655" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299199
+time="2026-07-04 21:54:46.973" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=2.028311833s size=924
+time="2026-07-04 21:54:48.679" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=2.025424s size=923
+time="2026-07-04 21:55:10.433" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=47.083µs size=0
+time="2026-07-04 21:55:10.433" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=134.833µs size=0
+time="2026-07-04 21:55:10.608" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=10.834083ms size=129
+time="2026-07-04 21:55:10.608" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=9.677458ms size=129
+time="2026-07-04 21:55:10.687" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=43.708µs size=0
+time="2026-07-04 21:55:11.103" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299223
+time="2026-07-04 21:55:12.842" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=5.406834ms size=129
+time="2026-07-04 21:55:12.843" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=5.193625ms size=129
+time="2026-07-04 21:55:12.933" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299225
+time="2026-07-04 21:55:13.126" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=2.023476875s size=924
+time="2026-07-04 21:55:14.953" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=2.021151084s size=921
+time="2026-07-04 21:56:07.309" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=112.667µs size=0
+time="2026-07-04 21:56:07.481" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=13.186917ms size=129
+time="2026-07-04 21:56:07.863" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=3.179042ms size=129
+time="2026-07-04 21:56:08.073" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.421292ms size=129
+time="2026-07-04 21:56:08.379" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=34.375µs size=0
+time="2026-07-04 21:56:08.825" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299280
+time="2026-07-04 21:56:09.130" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=305.63975ms size=978
+time="2026-07-04 21:56:09.258" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=5.852833ms size=129
+time="2026-07-04 21:56:09.481" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.849292ms size=129
+time="2026-07-04 21:56:09.727" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299282
+time="2026-07-04 21:56:09.837" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=112.264125ms size=978
+time="2026-07-04 21:56:11.766" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=5.670792ms size=129
+time="2026-07-04 21:56:11.766" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=5.860625ms size=129
+time="2026-07-04 21:56:11.900" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299284
+time="2026-07-04 21:56:12.004" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=105.094959ms size=978
+time="2026-07-04 21:57:58.966" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-04 21:57:58.981" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-04 21:57:59.139" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-04 21:57:59.142" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-04 21:57:59.142" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-04 21:57:59.143" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-04 21:58:03.917" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=213.042µs size=0
+time="2026-07-04 21:58:04.083" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=5.953625ms size=129
+time="2026-07-04 21:58:04.364" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=11907
+time="2026-07-04 21:58:16.260" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=34.042µs size=0
+time="2026-07-04 21:58:16.427" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=11.85ms size=129
+time="2026-07-04 21:58:16.556" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=36.167µs size=0
+time="2026-07-04 21:58:17.049" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299408
+time="2026-07-04 21:58:17.427" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=378.697042ms size=978
+time="2026-07-04 21:59:01.842" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=189.584µs size=0
+time="2026-07-04 21:59:02.007" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=9.066ms size=129
+time="2026-07-04 22:00:57.737" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=70µs size=0
+time="2026-07-04 22:00:58.245" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=16.573167ms size=129
+time="2026-07-04 22:04:00.451" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-04 22:04:00.463" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-04 22:04:00.585" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-04 22:04:00.588" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-04 22:04:00.588" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-04 22:04:00.589" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-04 22:04:00.976" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12367
+time="2026-07-04 22:04:07.289" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=143.666µs size=0
+time="2026-07-04 22:04:07.733" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.846792ms size=129
+time="2026-07-04 22:04:07.986" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.170959ms size=129
+time="2026-07-04 22:04:08.565" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=3.764584ms size=129
+time="2026-07-04 22:04:08.814" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=14.125µs size=0
+time="2026-07-04 22:04:09.240" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299761
+time="2026-07-04 22:04:09.585" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=344.699791ms size=978
+time="2026-07-04 22:04:10.066" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=3.658709ms size=129
+time="2026-07-04 22:04:10.180" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.682542ms size=129
+time="2026-07-04 22:04:10.483" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299762
+time="2026-07-04 22:04:10.590" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=111.554708ms size=977
+time="2026-07-04 22:04:35.846" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/music ip=103.172.183.76 took=817.45725ms size=3413
+time="2026-07-04 22:07:07.488" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=7afee262-dfb7-4afd-8892-c89ca8ad141f duration=0
+time="2026-07-04 22:07:07.831" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=205.169.39.20 took=343.313708ms size=1008
+time="2026-07-04 22:07:17.082" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=86.375µs size=0
+time="2026-07-04 22:07:17.193" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=18.458µs size=0
+time="2026-07-04 22:07:17.357" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=7.969917ms size=129
+time="2026-07-04 22:07:17.714" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.691416ms size=129
+time="2026-07-04 22:07:17.955" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=12.458µs size=0
+time="2026-07-04 22:07:18.464" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=299950
+time="2026-07-04 22:07:20.480" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=2.016488708s size=924
+time="2026-07-04 22:08:03.263" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=93.333µs size=0
+time="2026-07-04 22:08:03.429" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=10.959791ms size=129
+time="2026-07-04 22:14:10.650" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=137.167µs size=0
+time="2026-07-04 22:14:11.574" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=17.481334ms size=129
+time="2026-07-04 22:38:00.983" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=44.251.179.244 took=2.561ms size=0
+time="2026-07-04 22:38:01.495" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=89616bad-5b7d-435f-92d0-69ec9891f632 duration=0
+time="2026-07-04 22:38:01.873" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=44.251.179.244 took=382.49625ms size=1010
+time="2026-07-04 22:38:04.030" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=44.251.179.244 took=23.542µs size=0
+time="2026-07-04 22:38:05.918" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=44.251.179.244 took=63.583µs size=0
+time="2026-07-04 22:38:06.423" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=9e74b5d3-b5f9-49d5-bcc6-3c201a018e06 duration=0
+time="2026-07-04 22:38:06.528" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=44.251.179.244 took=105.206958ms size=1026
+time="2026-07-04 22:38:10.451" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=44.251.179.244 took=25.667µs size=0
+time="2026-07-04 23:09:25.151" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-04 23:09:25.169" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-04 23:09:25.390" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-04 23:09:25.392" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-04 23:09:25.392" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-04 23:09:25.393" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-04 23:09:30.868" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12093
+time="2026-07-04 23:16:50.174" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-04 23:16:50.190" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-04 23:16:50.346" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-04 23:16:50.349" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-04 23:16:50.349" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-04 23:16:50.349" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-04 23:16:50.761" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12230
+time="2026-07-04 23:21:36.660" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=292.667µs size=0
+time="2026-07-04 23:21:37.178" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=11.9395ms size=129
+time="2026-07-04 23:45:48.364" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=4.28325ms size=0
+time="2026-07-04 23:45:50.130" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=48.292µs size=0
+time="2026-07-04 23:45:50.131" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=76.917µs size=0
+time="2026-07-04 23:45:50.427" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=24.660458ms size=129
+time="2026-07-04 23:45:50.429" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=26.317083ms size=129
+time="2026-07-04 23:45:50.436" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=103.172.183.76 took=51.334µs size=0
+time="2026-07-04 23:45:51.260" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=305862
+time="2026-07-04 23:45:51.825" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=103.172.183.76 took=567.588625ms size=978
+time="2026-07-04 23:46:09.401" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=::1 took=21.46025ms size=791
+time="2026-07-04 23:46:09.456" level=WARN source=logger/gin.go msg=[HTTP] status=404 method=GET path=/favicon.ico ip=::1 took=6µs size=-1
+time="2026-07-04 23:46:35.911" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=103.172.183.76 took=107.5µs size=0
+time="2026-07-04 23:46:36.218" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=103.172.183.76 took=10.022584ms size=129
+time="2026-07-05 00:10:19.917" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-05 00:10:19.930" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-05 00:10:20.098" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-05 00:10:20.101" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-05 00:10:20.101" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-05 00:10:20.102" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-05 00:10:25.076" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12369
+time="2026-07-05 00:12:53.192" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-05 00:12:53.206" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-05 00:12:53.352" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-05 00:12:53.355" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-05 00:12:53.355" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-05 00:12:53.356" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-05 00:12:56.451" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12154
+time="2026-07-05 00:16:28.939" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-05 00:16:28.951" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-05 00:16:29.078" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-05 00:16:29.080" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-05 00:16:29.080" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-05 00:16:29.080" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-05 00:16:29.819" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12157
+time="2026-07-05 00:21:43.791" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-05 00:21:43.802" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-05 00:21:43.912" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-05 00:21:43.916" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-05 00:21:43.916" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-05 00:21:43.917" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-05 00:21:44.532" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12148
+time="2026-07-05 00:28:04.276" level=WARN source=logger/gin.go msg=[HTTP] status=404 method=GET path=/ ip=::1 took=394.125µs size=-1
+time="2026-07-05 00:28:08.132" level=WARN source=logger/gin.go msg=[HTTP] status=404 method=GET path=/chat ip=::1 took=10.666µs size=-1
+time="2026-07-05 00:28:08.796" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=::1 took=8.263292ms size=791
+time="2026-07-05 00:34:54.922" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-05 00:34:54.932" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-05 00:34:55.055" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-05 00:34:55.057" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-05 00:34:55.057" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-05 00:34:55.058" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-05 00:34:55.667" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12140
+time="2026-07-05 00:57:47.175" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=20.488375ms size=791
+time="2026-07-05 00:57:47.791" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.96775ms size=791
+time="2026-07-05 00:57:48.744" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.43525ms size=791
+time="2026-07-05 00:57:49.607" level=WARN source=logger/gin.go msg=[HTTP] status=404 method=GET path=/favicon.ico ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=56.583µs size=-1
+time="2026-07-05 00:57:49.989" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.046542ms size=791
+time="2026-07-05 00:57:53.029" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.064125ms size=791

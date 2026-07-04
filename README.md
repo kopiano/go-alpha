@@ -107,3 +107,45 @@ docker compose up -d --build backend
 ```shell
 docker compose logs --tail=50 backend
 ```
+
+### cloudflare tunnel
+```shell
+$ cloudflared tunnel create alpha-api
+# Created tunnel alpha-api with id b53f33e1-5f51-4597-9cc1-51b6538a4455
+$ ls -la ~/.cloudflared   
+#-r--------    1 coulsonzero  staff   175 Jul  4 23:02 b53f33e1-5f51-4597-9cc1-51b6538a4455.json
+$ vim ~/.cloudflared/config.yml
+#tunnel: b53f33e1-5f51-4597-9cc1-51b6538a4455
+#credentials-file: /Users/coulsonzero/.cloudflared/57eac48d-5987-4fbf-835f-32171c972429.json
+#protocol: http2  
+#ingress:
+#  - hostname: api.coulsonzero.shop
+#    service: http://localhost:8080
+#
+#  - service: http_status:404
+$ cloudflared tunnel route dns alpha-api api.coulsonzero.shop
+$ go run main.go
+$ cloudflared tunnel run alpha-api
+```
+`https://api.coulsonzero.shop/api/v1/user`
+
+```shell
+cloudflared tunnel list
+#ID                                   NAME          CREATED              CONNECTIONS 
+#b53f33e1-5f51-4597-9cc1-51b6538a4455 alpha-api     2026-07-04T15:02:43Z             
+#57eac48d-5987-4fbf-835f-32171c972429 alpha-backend 2026-07-04T08:41:40Z             
+#6d87878a-4baf-48d7-9cf1-2d360faeae06 gin-api       2026-07-04T15:02:15Z
+cloudflared tunnel delete alpha-backend
+cloudflared tunnel --loglevel debug run alpha-api
+cloudflared --version
+```
+
+* ERR Failed to dial a quic connection error="failed to dial to edge with quic: timeout: no recent network activity"
+```shell
+# http2
+cloudflared tunnel --protocol http2 run alpha-api
+cloudflared tunnel --protocol http2 --loglevel debug run alpha-api
+# ipv4
+cloudflared tunnel --protocol http2 --edge-ip-version 4 run alpha-api
+```
+
