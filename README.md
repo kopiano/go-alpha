@@ -103,3 +103,7 @@ ai 推荐：Cookie/Session + uuid去重
 ```sh
 docker compose up -d --build backend 
 ```
+查看log
+```shell
+docker compose logs --tail=50 backend
+```

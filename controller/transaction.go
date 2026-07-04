@@ -1,17 +1,24 @@
 package controller
 
 import (
+	"bytes"
+	"crypto/md5"
 	"encoding/csv"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"log/slog"
 	"math"
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	"go-alpha/models"
 	"go-alpha/response"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 )
 
 type TransactionController struct{}
@@ -38,28 +45,52 @@ func (tc *TransactionController) ImportCSV(c *gin.Context) {
 		filename = header.Filename
 	}
 
-	txns, err := parseWeChatCSV(file, filename)
+	data, err := io.ReadAll(file)
+	if err != nil {
+		response.Failed("读取 CSV 文件失败", c)
+		return
+	}
+
+	// 自动检测编码并转为 UTF-8
+	data = detectAndDecode(data)
+
+	slog.Info("ImportCSV: CSV preview", "preview", previewFirstBytes(data, 600))
+
+	source := detectCSVSource(data, filename)
+	slog.Info("ImportCSV: source detected", "source", source, "filename", filename)
+
+	var txns []models.Transaction
+	if source == "Alipay" {
+		txns, err = parseAlipayCSV(bytes.NewReader(data), filename)
+	} else {
+		txns, err = parseWeChatCSV(bytes.NewReader(data), filename)
+	}
 	if err != nil {
 		slog.Error("Transaction.ImportCSV: parse failed", "error", err)
 		response.Failed("CSV 解析失败: "+err.Error(), c)
 		return
 	}
 
-	// 为每条记录绑定 userID
+	// 绑定 userID
 	for i := range txns {
 		txns[i].UserID = userID.(uint)
 	}
 
-	// 批量写入（跳过重复交易单号）
-	inserted, err := (&models.Transaction{}).BatchCreate(txns)
+	// 分批写入（支付宝用专用方法，微信用通用方法）
+	var inserted int64
+	if source == "Alipay" {
+		inserted, err = (&models.Transaction{}).BatchCreateAlipay(txns)
+	} else {
+		inserted, err = (&models.Transaction{}).BatchCreateWeChat(txns)
+	}
 	if err != nil {
 		slog.Error("Transaction.ImportCSV: batch insert failed", "error", err)
 		response.Failed("数据保存失败", c)
 		return
 	}
+
 	duplicates := len(txns) - int(inserted)
 
-	// 统计
 	summary := calcSummary(txns)
 	slog.Info("Transaction.ImportCSV: success",
 		"user_id", userID,
@@ -80,13 +111,12 @@ func (tc *TransactionController) ImportCSV(c *gin.Context) {
 
 // ─── List ────────────────────────────────────────────────────────────────────
 
-// List  GET /api/v1/transactions — 获取交易记录（分页 + 筛选）
 func (tc *TransactionController) List(c *gin.Context) {
 	userID, _ := c.Get("userId")
-
 	year := c.Query("year")
 	month := c.Query("month")
 	category := c.Query("category")
+	txType := c.Query("type")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "50"))
 
@@ -95,6 +125,7 @@ func (tc *TransactionController) List(c *gin.Context) {
 		Year:     year,
 		Month:    month,
 		Category: category,
+		Type:     txType,
 		Page:     page,
 		PageSize: pageSize,
 	}
@@ -109,40 +140,30 @@ func (tc *TransactionController) List(c *gin.Context) {
 		txns = []models.Transaction{}
 	}
 
-	// 同时返回汇总数据
 	summary, _ := (models.Transaction{}).GetSummary(userID.(uint), year, month)
-
-	response.Success("ok", gin.H{
-		"list":    txns,
-		"total":   total,
-		"summary": summary,
-	}, c)
+	response.Success("ok", gin.H{"list": txns, "total": total, "summary": summary}, c)
 }
 
-// ─── Filter (POST) ──────────────────────────────────────────────────────────
-
-// FilterByMonth  POST /api/v1/transactions/filter — 按年月筛选交易记录
 func (tc *TransactionController) FilterByMonth(c *gin.Context) {
 	userID, _ := c.Get("userId")
-
 	var body struct {
 		Year  string `json:"year"`
 		Month string `json:"month"`
+		Type  string `json:"type"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		// 如果 body 为空或非 JSON，回退到查询参数
 		body.Year = c.Query("year")
 		body.Month = c.Query("month")
+		body.Type = c.Query("type")
 	}
-
 	filter := models.TransactionFilter{
 		UserID:   userID.(uint),
 		Year:     body.Year,
 		Month:    body.Month,
+		Type:     body.Type,
 		Page:     1,
 		PageSize: 200,
 	}
-
 	txns, total, err := (models.Transaction{}).List(filter)
 	if err != nil {
 		slog.Error("Transaction.FilterByMonth: query failed", "error", err)
@@ -152,40 +173,25 @@ func (tc *TransactionController) FilterByMonth(c *gin.Context) {
 	if txns == nil {
 		txns = []models.Transaction{}
 	}
-
 	summary, _ := (models.Transaction{}).GetSummary(userID.(uint), body.Year, body.Month)
-
-	response.Success("ok", gin.H{
-		"list":    txns,
-		"total":   total,
-		"summary": summary,
-	}, c)
+	response.Success("ok", gin.H{"list": txns, "total": total, "summary": summary}, c)
 }
 
-// ─── Summary ────────────────────────────────────────────────────────────────
-
-// Summary  GET /api/v1/transactions/summary — 收支汇总
 func (tc *TransactionController) Summary(c *gin.Context) {
 	userID, _ := c.Get("userId")
 	year := c.Query("year")
 	month := c.Query("month")
-
 	summary, err := (models.Transaction{}).GetSummary(userID.(uint), year, month)
 	if err != nil {
 		slog.Error("Transaction.Summary: query failed", "error", err)
 		response.Failed("查询失败", c)
 		return
 	}
-
 	response.Success("ok", summary, c)
 }
 
-// ─── Months ─────────────────────────────────────────────────────────────────
-
-// Months  GET /api/v1/transactions/months — 用户有记录的所有月份
 func (tc *TransactionController) Months(c *gin.Context) {
 	userID, _ := c.Get("userId")
-
 	months, err := (models.Transaction{}).GetAvailableMonths(userID.(uint))
 	if err != nil {
 		slog.Error("Transaction.Months: query failed", "error", err)
@@ -195,37 +201,26 @@ func (tc *TransactionController) Months(c *gin.Context) {
 	if months == nil {
 		months = []string{}
 	}
-
 	response.Success("ok", gin.H{"months": months}, c)
 }
 
-// ─── Delete ─────────────────────────────────────────────────────────────────
-
-// Delete  DELETE /api/v1/transactions — 清空当前用户交易记录
 func (tc *TransactionController) Delete(c *gin.Context) {
 	userID, _ := c.Get("userId")
 	year := c.Query("year")
 	month := c.Query("month")
-
 	err := (models.Transaction{}).DeleteByUserID(userID.(uint), year, month)
 	if err != nil {
 		slog.Error("Transaction.Delete: failed", "error", err)
 		response.Failed("清空失败", c)
 		return
 	}
-
-	slog.Info("Transaction.Delete: done", "user_id", userID)
 	response.Success("已清空交易数据", nil, c)
 }
 
-// ─── Category Breakdown ─────────────────────────────────────────────────────
-
-// CategoryBreakdown  GET /api/v1/transactions/categories — 分类支出
 func (tc *TransactionController) CategoryBreakdown(c *gin.Context) {
 	userID, _ := c.Get("userId")
 	year := c.Query("year")
 	month := c.Query("month")
-
 	entries, err := (models.Transaction{}).GetCategorySummary(userID.(uint), year, month)
 	if err != nil {
 		slog.Error("Transaction.CategoryBreakdown: query failed", "error", err)
@@ -235,17 +230,12 @@ func (tc *TransactionController) CategoryBreakdown(c *gin.Context) {
 	if entries == nil {
 		entries = []models.CategoryEntry{}
 	}
-
 	response.Success("ok", entries, c)
 }
 
-// ─── Monthly Breakdown ──────────────────────────────────────────────────────
-
-// MonthlyBreakdown  GET /api/v1/transactions/monthly — 月度支出趋势
 func (tc *TransactionController) MonthlyBreakdown(c *gin.Context) {
 	userID, _ := c.Get("userId")
 	year := c.Query("year")
-
 	entries, err := (models.Transaction{}).GetMonthlySummary(userID.(uint), year)
 	if err != nil {
 		slog.Error("Transaction.MonthlyBreakdown: query failed", "error", err)
@@ -255,57 +245,262 @@ func (tc *TransactionController) MonthlyBreakdown(c *gin.Context) {
 	if entries == nil {
 		entries = []models.MonthlyEntry{}
 	}
-
 	response.Success("ok", entries, c)
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// CSV 解析
+// CSV 来源检测
 // ═════════════════════════════════════════════════════════════════════════════
 
-// parseWeChatCSV 解析微信账单 CSV 文件
-// 微信导出格式：
-//   第1行: "微信支付账单明细列表"
-//   第2行: 微信昵称
-//   第3行: 起始/终止时间
-//   第4行: 导出类型
-//   第5行: "----------------------------------"
-//   第6行: 表头 (交易时间,交易类型,交易对方,商品说明,收/支,金额,支付方式,当前状态,交易单号,商户单号,备注)
-//   第7+行: 数据行
-//   最后几行: 汇总信息
-func parseWeChatCSV(r io.Reader, filename string) ([]models.Transaction, error) {
+func detectCSVSource(data []byte, filename string) string {
+	if strings.HasPrefix(filename, "cashbook_record") || strings.Contains(filename, "支付宝") {
+		return "Alipay"
+	}
+	if strings.Contains(filename, "微信") || strings.Contains(filename, "WeChat") {
+		return "WeChat"
+	}
+	reader := csv.NewReader(bytes.NewReader(data))
+	reader.LazyQuotes = true
+	reader.FieldsPerRecord = -1
+	for i := 0; i < 10; i++ {
+		row, err := reader.Read()
+		if err != nil {
+			break
+		}
+		for _, col := range row {
+			t := strings.TrimSpace(col)
+			if strings.Contains(t, "支付宝") || strings.Contains(t, "Alipay") ||
+				strings.Contains(t, "余额宝") || strings.Contains(t, "花呗") {
+				return "Alipay"
+			}
+			if strings.Contains(t, "微信") || strings.Contains(t, "WeChat") {
+				return "WeChat"
+			}
+		}
+	}
+	return ""
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 支付宝 CSV 解析
+// ═════════════════════════════════════════════════════════════════════════════
+
+func parseAlipayCSV(r io.Reader, filename string) ([]models.Transaction, error) {
 	reader := csv.NewReader(r)
 	reader.LazyQuotes = true
-	reader.FieldsPerRecord = -1 // 允许可变列数
-
+	reader.FieldsPerRecord = -1
 	var txns []models.Transaction
-	var csvSource string // 从 CSV 元数据行检测来源（WeChat / Alipay）
-
-	// 优先从文件名判断
-	if strings.HasPrefix(filename, "cashbook_record") || strings.Contains(filename, "支付宝") {
-		csvSource = "Alipay"
-	} else if strings.Contains(filename, "微信") || strings.Contains(filename, "WeChat") {
-		csvSource = "WeChat"
-	}
 	headerFound := false
-	var headerIdx []int // 各字段在 CSV 列中的索引
+	var idx []int
 
 	for {
 		row, err := reader.Read()
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			continue // 跳过解析错误的行
+		if err != nil || len(row) < 3 {
+			continue
 		}
-		if len(row) < 3 {
+		first := strings.TrimSpace(row[0])
+		if first == "" || strings.HasPrefix(first, "---") || strings.HasPrefix(first, "==") ||
+			strings.Contains(first, "汇总") || strings.Contains(first, "账单明细") ||
+			strings.Contains(first, "支付宝") || strings.Contains(first, "说明") {
 			continue
 		}
 
-		// 跳过空行、分隔线、汇总行
-		first := strings.TrimSpace(row[0])
+		if !headerFound {
+			hasTime, hasAmount, hasType := false, false, false
+			for _, col := range row {
+				t := strings.TrimSpace(col)
+				if strings.Contains(t, "交易时间") || strings.Contains(t, "记录时间") || t == "时间" {
+					hasTime = true
+				}
+				if strings.Contains(t, "金额") || t == "¥" {
+					hasAmount = true
+				}
+				if t == "收/支" || strings.Contains(t, "收入") || strings.Contains(t, "支出") || strings.Contains(t, "收支") {
+					hasType = true
+				}
+			}
+			if hasTime && hasAmount && hasType {
+				headerFound = true
+				idx = mapAlipayHeader(row)
+				slog.Info("Alipay CSV header found", "row", row)
+			}
+			continue
+		}
 
-		// 从文件内容检测来源（微信/支付宝）
+		txn, ok := parseAlipayRow(row, idx)
+		if !ok {
+			continue
+		}
+		txn.PaymentApp = "Alipay"
+		txns = append(txns, txn)
+	}
+
+	if !headerFound {
+		return nil, parseErr("未找到支付宝CSV表头，请确认是支付宝账单格式")
+	}
+	if len(txns) == 0 {
+		return nil, parseErr("未能从CSV中提取到有效交易记录")
+	}
+	slog.Info("Alipay CSV parsed", "rows", len(txns))
+	return txns, nil
+}
+
+func mapAlipayHeader(row []string) []int {
+	idx := make([]int, 9)
+	for i := range idx {
+		idx[i] = -1
+	}
+	for i, col := range row {
+		t := strings.TrimSpace(col)
+		switch {
+		case strings.Contains(t, "交易时间") || strings.Contains(t, "记录时间") || t == "时间":
+			idx[0] = i // Time
+		case strings.Contains(t, "分类"):
+			idx[1] = i // Category
+		case strings.Contains(t, "交易对方") || t == "对方":
+			idx[2] = i // Merchant
+		case (strings.Contains(t, "商品说明") || strings.Contains(t, "商品")) && !strings.Contains(t, "备注"):
+			idx[3] = i // Product
+		case t == "收/支" || strings.Contains(t, "收入") || strings.Contains(t, "支出") || strings.Contains(t, "收支类型"):
+			idx[4] = i // inOut
+		case strings.Contains(t, "金额") || t == "¥":
+			idx[5] = i // Amount
+		case (strings.Contains(t, "支付") || strings.Contains(t, "账户") || strings.Contains(t, "交易方式")) && !strings.Contains(t, "软件"):
+			idx[6] = i // PaymentMethod
+		case strings.Contains(t, "交易单号") || strings.Contains(t, "订单号"):
+			idx[7] = i // TransactionID
+		case strings.Contains(t, "备注"):
+			idx[8] = i // Note
+		}
+	}
+	return idx
+}
+
+func parseAlipayRow(row []string, idx []int) (models.Transaction, bool) {
+	get := func(i int) string {
+		if i < 0 || i >= len(row) {
+			return ""
+		}
+		return strings.TrimSpace(row[i])
+	}
+
+	timeStr := get(idx[0])
+	category := get(idx[1])
+	merchant := get(idx[2])
+	product := get(idx[3])
+	inOut := get(idx[4])
+	amountStr := get(idx[5])
+	payMethod := get(idx[6])
+	transactionID := get(idx[7])
+	note := get(idx[8])
+
+	if timeStr == "" || amountStr == "" {
+		return models.Transaction{}, false
+	}
+
+	amount := parseAmount(amountStr)
+	if amount <= 0 {
+		return models.Transaction{}, false
+	}
+
+	// 从备注中提取商家和商品信息
+	if merchant == "" {
+		if orderIdx := strings.Index(note, "订单号"); orderIdx >= 0 {
+			part := note[orderIdx+9:]
+			if semi := strings.Index(part, "；"); semi >= 0 {
+				merchant = part[:semi]
+			} else {
+				merchant = strings.TrimSpace(part)
+			}
+		}
+		if merchant == "" {
+			merchant = category
+		}
+	}
+	if product == "" {
+		product = category
+	}
+
+	var txnType string
+	switch {
+	case inOut == "收入" || inOut == "收益":
+		txnType = "income"
+	case inOut == "支出" || inOut == "消费":
+		txnType = "expense"
+	default:
+		text := merchant + " " + product + " " + note
+		isNeutral := false
+		for _, kw := range neutralKeywords {
+			if strings.Contains(text, kw) {
+				isNeutral = true
+				break
+			}
+		}
+		if isNeutral {
+			txnType = "neutral"
+		} else {
+			txnType = "expense"
+		}
+	}
+
+	if category == "" {
+		category = autoCategory(merchant, product, "")
+	}
+
+	// 生成去重ID：按时间+类型+金额+备注 的 MD5
+	if transactionID == "" {
+		hash := md5.Sum([]byte(fmt.Sprintf("%s|%s|%.2f|%s|%s", timeStr, txnType, amount, merchant, note)))
+		transactionID = "alipay_" + hex.EncodeToString(hash[:])
+	}
+
+	return models.Transaction{
+		Time:          normalizeTime(timeStr),
+		Type:          txnType,
+		Merchant:      merchant,
+		Product:       product,
+		Amount:        amount,
+		PaymentMethod: payMethod,
+		PaymentApp:    "Alipay",
+		Category:      category,
+		Note:          note,
+		TransactionID: transactionID,
+	}, true
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 微信 CSV 解析
+// ═════════════════════════════════════════════════════════════════════════════
+
+func parseWeChatCSV(r io.Reader, filename string) ([]models.Transaction, error) {
+	reader := csv.NewReader(r)
+	reader.LazyQuotes = true
+	reader.FieldsPerRecord = -1
+
+	var txns []models.Transaction
+	headerFound := false
+	var headerIdx []int
+
+	// 优先从文件名判断
+	csvSource := ""
+	if strings.HasPrefix(filename, "cashbook_record") || strings.Contains(filename, "支付宝") {
+		csvSource = "Alipay"
+	} else if strings.Contains(filename, "微信") || strings.Contains(filename, "WeChat") {
+		csvSource = "WeChat"
+	}
+
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil || len(row) < 3 {
+			continue
+		}
+
+		first := strings.TrimSpace(row[0])
 		if csvSource == "" && first != "" {
 			if strings.Contains(first, "微信") {
 				csvSource = "WeChat"
@@ -313,6 +508,7 @@ func parseWeChatCSV(r io.Reader, filename string) ([]models.Transaction, error) 
 				csvSource = "Alipay"
 			}
 		}
+
 		if first == "" || strings.HasPrefix(first, "--") || strings.HasPrefix(first, "本笔账单") ||
 			strings.Contains(first, "汇总") || strings.Contains(first, "微信支付账单") ||
 			strings.Contains(first, "微信昵称") || strings.Contains(first, "起始时间") ||
@@ -320,10 +516,8 @@ func parseWeChatCSV(r io.Reader, filename string) ([]models.Transaction, error) 
 			continue
 		}
 
-		// 查找表头行 — 检查所有列，"交易时间"和"交易对方"在不同列中
 		if !headerFound {
-			hasTime := false
-			hasMerchant := false
+			hasTime, hasMerchant := false, false
 			for _, col := range row {
 				trimmed := strings.TrimSpace(col)
 				if strings.Contains(trimmed, "交易时间") {
@@ -336,12 +530,10 @@ func parseWeChatCSV(r io.Reader, filename string) ([]models.Transaction, error) 
 			if hasTime && hasMerchant {
 				headerFound = true
 				headerIdx = mapWeChatHeader(row)
-				slog.Info("CSV header found", "row", row)
 			}
 			continue
 		}
 
-		// 解析数据行
 		txn, ok := parseWeChatRow(row, headerIdx)
 		if !ok {
 			continue
@@ -356,26 +548,19 @@ func parseWeChatCSV(r io.Reader, filename string) ([]models.Transaction, error) 
 		return nil, parseErr("未能从CSV中提取到有效交易记录")
 	}
 
-	// 统一设置支付软件来源
 	if csvSource != "" {
 		for i := range txns {
 			txns[i].PaymentApp = csvSource
 		}
-		slog.Info("CSV source detected", "source", csvSource, "rows", len(txns))
 	}
-
 	return txns, nil
 }
 
-// mapWeChatHeader 映射微信 CSV 表头列
-// 返回各字段在 row 中的索引位置
 func mapWeChatHeader(row []string) []int {
-	// 索引顺序: [交易时间, 交易类型, 交易对方, 商品说明, 收/支, 金额, 支付方式, 状态, 交易单号, 商户单号, 备注]
 	idx := make([]int, 11)
 	for i := range idx {
 		idx[i] = -1
 	}
-
 	for i, col := range row {
 		col = strings.TrimSpace(col)
 		switch {
@@ -405,17 +590,14 @@ func mapWeChatHeader(row []string) []int {
 			idx[10] = i
 		}
 	}
-
 	return idx
 }
 
-// 中性交易关键词
 var neutralKeywords = []string{
 	"充值", "提现", "理财通", "零钱通", "信用卡还款",
 	"转入", "转出", "基金", "零钱理财",
 }
 
-// parseWeChatRow 解析一行微信交易记录
 func parseWeChatRow(row []string, idx []int) (models.Transaction, bool) {
 	get := func(i int) string {
 		if i < 0 || i >= len(row) {
@@ -438,13 +620,11 @@ func parseWeChatRow(row []string, idx []int) (models.Transaction, bool) {
 		return models.Transaction{}, false
 	}
 
-	// 解析金额
 	amount := parseAmount(amountStr)
 	if amount <= 0 {
 		return models.Transaction{}, false
 	}
 
-	// 判断交易类型
 	var txnType string
 	switch {
 	case inOut == "收入":
@@ -457,30 +637,28 @@ func parseWeChatRow(row []string, idx []int) (models.Transaction, bool) {
 		if isNeutral(txType, product, note) {
 			txnType = "neutral"
 		} else {
-			txnType = "expense" // 默认
+			txnType = "expense"
 		}
 	default:
 		txnType = "expense"
 	}
 
-	// 自动分类
 	category := autoCategory(merchant, product, txType)
 
 	return models.Transaction{
-		Time:           normalizeTime(timeStr),
-		Type:           txnType,
-		Merchant:       merchant,
-		Product:        product,
-		Amount:         amount,
-		PaymentMethod:  payMethod,
-		PaymentApp:     normalizePaymentApp(payMethod),
-		Category:       category,
-		Note:           note,
-		TransactionID:  transactionID,
+		Time:          normalizeTime(timeStr),
+		Type:          txnType,
+		Merchant:      merchant,
+		Product:       product,
+		Amount:        amount,
+		PaymentMethod: payMethod,
+		PaymentApp:    normalizePaymentApp(payMethod),
+		Category:      category,
+		Note:          note,
+		TransactionID: transactionID,
 	}, true
 }
 
-// isNeutral 判断是否是中性交易
 func isNeutral(txType, product, note string) bool {
 	text := txType + " " + product + " " + note
 	textLower := strings.ToLower(text)
@@ -492,7 +670,10 @@ func isNeutral(txType, product, note string) bool {
 	return false
 }
 
-// autoCategory 根据商家/商品名自动分类
+// ═════════════════════════════════════════════════════════════════════════════
+// 自动分类
+// ═════════════════════════════════════════════════════════════════════════════
+
 func autoCategory(merchant, product, txType string) string {
 	text := merchant + " " + product + " " + txType
 	textLower := strings.ToLower(text)
@@ -524,25 +705,24 @@ func autoCategory(merchant, product, txType string) string {
 	return "其他"
 }
 
-// parseAmount 解析金额字符串 "¥38.00"、"38.00"、"-¥38.00"、"-38.00"
+// ═════════════════════════════════════════════════════════════════════════════
+// 工具函数
+// ═════════════════════════════════════════════════════════════════════════════
+
 func parseAmount(s string) float64 {
 	s = strings.TrimSpace(s)
 	s = strings.ReplaceAll(s, ",", "")
 	s = strings.ReplaceAll(s, "¥", "")
 	s = strings.ReplaceAll(s, "￥", "")
 	s = strings.TrimSpace(s)
-
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return 0
 	}
-
 	return math.Abs(f)
 }
 
-// normalizeTime 规范时间格式
 func normalizeTime(s string) string {
-	// 微信格式: "2026-07-01 12:30:00"
 	re := regexp.MustCompile(`(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s+(\d{1,2}:\d{2}(:\d{2})?)`)
 	match := re.FindStringSubmatch(s)
 	if len(match) > 0 {
@@ -556,7 +736,6 @@ func normalizeTime(s string) string {
 	return s
 }
 
-// calcSummary 计算一批交易的汇总数据
 func calcSummary(txns []models.Transaction) models.TransactionSummary {
 	var s models.TransactionSummary
 	for _, t := range txns {
@@ -578,17 +757,20 @@ func calcSummary(txns []models.Transaction) models.TransactionSummary {
 }
 
 func normalizePaymentApp(s string) string {
-	// 微信支付
 	if strings.Contains(s, "微信") || strings.Contains(s, "WeChat") {
 		return "WeChat"
 	}
-	// 支付宝及阿里系
 	if strings.Contains(s, "支付宝") || strings.Contains(s, "Alipay") ||
 		strings.Contains(s, "余额宝") || strings.Contains(s, "花呗") ||
 		strings.Contains(s, "余利宝") || strings.Contains(s, "借呗") {
 		return "Alipay"
 	}
 	return s
+}
+
+func decodeGBK(data []byte) ([]byte, error) {
+	reader := transform.NewReader(bytes.NewReader(data), simplifiedchinese.GBK.NewDecoder())
+	return io.ReadAll(reader)
 }
 
 func parseErr(msg string) error {
@@ -598,3 +780,52 @@ func parseErr(msg string) error {
 type csvParseError struct{ msg string }
 
 func (e *csvParseError) Error() string { return e.msg }
+
+func previewFirstBytes(data []byte, n int) string {
+	s := string(data)
+	runes := []rune(s)
+	if len(runes) > n {
+		runes = runes[:n]
+	}
+	return string(runes)
+}
+
+func isValidUTF8(data []byte) bool {
+	return utf8.Valid(data)
+}
+
+// detectAndDecode 自动检测 CSV 编码并转为 UTF-8
+func detectAndDecode(data []byte) []byte {
+	// UTF-8 BOM: \xEF\xBB\xBF
+	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+		slog.Info("detectAndDecode: UTF-8 BOM detected, stripping BOM")
+		return data[3:]
+	}
+
+	// UTF-16 LE BOM: \xFF\xFE
+	if len(data) >= 2 && data[0] == 0xFF && data[1] == 0xFE {
+		slog.Info("detectAndDecode: UTF-16 LE BOM detected, decoding")
+		// 简单处理：尝试 GBK 或直接返回（实际场景较少）
+	}
+
+	// 已经是合法 UTF-8，不需要转码
+	if utf8.Valid(data) {
+		return data
+	}
+
+	// 尝试 GBK 解码
+	slog.Info("detectAndDecode: not valid UTF-8, trying GBK decode")
+	decoded, err := decodeGBK(data)
+	if err != nil {
+		slog.Warn("detectAndDecode: GBK decode failed, returning raw bytes", "error", err)
+		return data
+	}
+
+	// GBK 解码后若仍不是合法 UTF-8，说明可能不是 GBK
+	if !utf8.Valid(decoded) {
+		slog.Warn("detectAndDecode: decoded is still not valid UTF-8, returning raw bytes")
+		return data
+	}
+
+	return decoded
+}

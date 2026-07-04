@@ -1,6 +1,8 @@
 package models
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -13,16 +15,16 @@ type Transaction struct {
 	UpdatedAt     time.Time      `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 	UserID        uint           `gorm:"index;not null" json:"user_id"`
-	Time          string         `gorm:"type:varchar(50);index" json:"time"`             // 交易时间
-	Type          string         `gorm:"type:varchar(20);index" json:"type"`             // income / expense / neutral
-	Merchant      string         `gorm:"type:varchar(255)" json:"merchant"`              // 商家（交易对方）
-	Product       string         `gorm:"type:varchar(255)" json:"product"`               // 商品说明
-	Amount        float64        `gorm:"type:decimal(12,2);not null" json:"amount"`      // 金额
-	PaymentMethod string         `gorm:"type:varchar(100)" json:"payment_method"`         // 支付方式
-	PaymentApp    string         `gorm:"type:varchar(100)" json:"payment_app"`           // 支付软件
-	Category      string         `gorm:"type:varchar(100);index" json:"category"`        // 分类
-	Note          string         `gorm:"type:text" json:"note"`                          // 备注
-	TransactionID  string         `gorm:"type:varchar(100);index" json:"transaction_id"`  // 交易单号（应用层去重）
+	Time          string         `gorm:"type:varchar(50);index" json:"time"`            // 交易时间
+	Type          string         `gorm:"type:varchar(20);index" json:"type"`            // income / expense / neutral
+	Merchant      string         `gorm:"type:varchar(255)" json:"merchant"`             // 商家（交易对方）
+	Product       string         `gorm:"type:varchar(255)" json:"product"`             // 商品说明
+	Amount        float64        `gorm:"type:decimal(12,2);not null" json:"amount"`     // 金额
+	PaymentMethod string         `gorm:"type:varchar(100)" json:"payment_method"`       // 支付方式
+	PaymentApp    string         `gorm:"type:varchar(100)" json:"payment_app"`          // 支付软件
+	Category      string         `gorm:"type:varchar(100);index" json:"category"`       // 分类
+	Note          string         `gorm:"type:text" json:"note"`                         // 备注
+	TransactionID string         `gorm:"type:varchar(100);index" json:"transaction_id"` // 交易单号（应用层去重）
 }
 
 // ─── Query params ───
@@ -32,19 +34,20 @@ type TransactionFilter struct {
 	Year     string // "2026"
 	Month    string // "07"
 	Category string
+	Type     string
 	Page     int
 	PageSize int
 }
 
 type TransactionSummary struct {
-	IncomeCount  int     `json:"income_count"`
-	IncomeAmount float64 `json:"income_amount"`
-	ExpenseCount int     `json:"expense_count"`
+	IncomeCount   int     `json:"income_count"`
+	IncomeAmount  float64 `json:"income_amount"`
+	ExpenseCount  int     `json:"expense_count"`
 	ExpenseAmount float64 `json:"expense_amount"`
-	NeutralCount int     `json:"neutral_count"`
+	NeutralCount  int     `json:"neutral_count"`
 	NeutralAmount float64 `json:"neutral_amount"`
-	TotalIncome  float64 `json:"total_income"`
-	TotalExpense float64 `json:"total_expense"`
+	TotalIncome   float64 `json:"total_income"`
+	TotalExpense  float64 `json:"total_expense"`
 }
 
 // ─── Model methods ───
@@ -53,8 +56,8 @@ func (Transaction) TableName() string {
 	return "transaction"
 }
 
-// BatchCreate 批量插入交易记录（根据交易单号去重）
-func (t *Transaction) BatchCreate(txns []Transaction) (int64, error) {
+// BatchCreateWeChat 批量插入交易记录（根据交易单号去重）
+func (t *Transaction) BatchCreateWeChat(txns []Transaction) (int64, error) {
 	if len(txns) == 0 {
 		return 0, nil
 	}
@@ -86,6 +89,69 @@ func (t *Transaction) BatchCreate(txns []Transaction) (int64, error) {
 	return result.RowsAffected, result.Error
 }
 
+// BatchCreateAlipay 批量插入支付宝账单（含去重，只写入支付宝账单存在的字段）
+func (t *Transaction) BatchCreateAlipay(txns []Transaction) (int64, error) {
+	if len(txns) == 0 {
+		return 0, nil
+	}
+
+	var existingIDs []string
+	DB.Model(&Transaction{}).
+		Where("user_id = ? AND transaction_id IS NOT NULL AND transaction_id != ''", txns[0].UserID).
+		Pluck("transaction_id", &existingIDs)
+
+	idSet := make(map[string]bool, len(existingIDs))
+	for _, id := range existingIDs {
+		idSet[id] = true
+	}
+
+	// 分段插入，每批 100 条
+	batchSize := 100
+	inserted := int64(0)
+
+	cols := []string{"user_id", "time", "type", "amount", "category", "merchant", "product", "note", "payment_method", "payment_app", "transaction_id", "created_at", "updated_at"}
+	colStr := "`" + strings.Join(cols, "`,`") + "`"
+	placeholders := "(?" + strings.Repeat(",?", len(cols)-1) + ")"
+
+	for i := 0; i < len(txns); i += batchSize {
+		end := i + batchSize
+		if end > len(txns) {
+			end = len(txns)
+		}
+		batch := txns[i:end]
+
+		var newBatch []Transaction
+		for _, txn := range batch {
+			if txn.TransactionID == "" || !idSet[txn.TransactionID] {
+				newBatch = append(newBatch, txn)
+				if txn.TransactionID != "" {
+					idSet[txn.TransactionID] = true
+				}
+			}
+		}
+		if len(newBatch) == 0 {
+			continue
+		}
+
+		var valueStrings []string
+		var valueArgs []interface{}
+		for _, txn := range newBatch {
+			valueStrings = append(valueStrings, placeholders)
+			valueArgs = append(valueArgs, txn.UserID, txn.Time, txn.Type, txn.Amount,
+				txn.Category, txn.Merchant, txn.Product, txn.Note, txn.PaymentMethod, txn.PaymentApp,
+				txn.TransactionID, time.Now(), time.Now())
+		}
+
+		sql := fmt.Sprintf("INSERT INTO `transaction` (%s) VALUES %s", colStr, strings.Join(valueStrings, ","))
+		result := DB.Exec(sql, valueArgs...)
+		if result.Error != nil {
+			return inserted, result.Error
+		}
+		inserted += result.RowsAffected
+	}
+	return inserted, nil
+}
+
 // List 查询交易记录（带分页和筛选）
 func (Transaction) List(filter TransactionFilter) ([]Transaction, int64, error) {
 	var txns []Transaction
@@ -102,6 +168,9 @@ func (Transaction) List(filter TransactionFilter) ([]Transaction, int64, error) 
 	}
 	if filter.Category != "" {
 		query = query.Where("category = ?", filter.Category)
+	}
+	if filter.Type != "" {
+		query = query.Where("type = ?", filter.Type)
 	}
 
 	query.Count(&total)
@@ -257,12 +326,22 @@ func (Transaction) GetCategorySummary(userID uint, year, month string) ([]Catego
 
 // DeleteByUserID 删除用户某月或所有交易记录
 func (Transaction) DeleteByUserID(userID uint, year, month string) error {
-	query := DB.Where("user_id = ?", userID)
+	query := DB.Unscoped().Where("user_id = ?", userID)
 	if year != "" {
 		query = query.Where("LEFT(time, 4) = ?", year)
 	}
 	if month != "" {
 		query = query.Where("LEFT(time, 7) = ?", year+"-"+month)
 	}
-	return query.Delete(&Transaction{}).Error
+	err := query.Delete(&Transaction{}).Error
+	if err != nil {
+		return err
+	}
+	// 表为空时重置自增 ID，防止 ID 一直增长
+	var count int64
+	DB.Model(&Transaction{}).Unscoped().Count(&count)
+	if count == 0 {
+		DB.Exec("ALTER TABLE `transaction` AUTO_INCREMENT = 1")
+	}
+	return nil
 }

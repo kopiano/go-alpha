@@ -17,3 +17,9 @@ docker-rebuild:
 docker-restart:
 	@docker compose down -v && docker compose up -d --build
 
+
+log-50:
+	@docker compose logs --tail=50 backend
+
+log:
+	@docker compose logs backend
