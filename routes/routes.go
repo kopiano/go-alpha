@@ -125,6 +125,8 @@ func SetupRouter() *gin.Engine {
 		transactionGroup.GET("/summary", transactionController.Summary)              // GET  /api/v1/transactions/summary
 		transactionGroup.GET("/months", transactionController.Months)                // GET  /api/v1/transactions/months
 		transactionGroup.GET("/categories", transactionController.CategoryBreakdown) // GET  /api/v1/transactions/categories
+		transactionGroup.GET("/top-merchants", transactionController.TopMerchants)     // GET  /api/v1/transactions/top-merchants
+		transactionGroup.GET("/hot-merchants", transactionController.HotMerchants)       // GET  /api/v1/transactions/hot-merchants
 		transactionGroup.GET("/monthly", transactionController.MonthlyBreakdown)     // GET  /api/v1/transactions/monthly
 		transactionGroup.DELETE("", transactionController.Delete)                    // DELETE /api/v1/transactions
 	}

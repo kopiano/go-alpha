@@ -11,6 +11,10 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"context"
+	"encoding/json"
+	"time"
+
 	"strings"
 	"unicode/utf8"
 
@@ -231,6 +235,51 @@ func (tc *TransactionController) CategoryBreakdown(c *gin.Context) {
 		entries = []models.CategoryEntry{}
 	}
 	response.Success("ok", entries, c)
+}
+
+// TopMerchants  GET /api/v1/transactions/top-merchants — 商家消费排行
+func (tc *TransactionController) TopMerchants(c *gin.Context) {
+	userID, _ := c.Get("userId")
+	year := c.Query("year")
+	month := c.Query("month")
+	paymentApp := c.DefaultQuery("payment_app", "WeChat")
+	results, err := (models.Transaction{}).GetTopMerchants(userID.(uint), year, month, paymentApp)
+	if err != nil {
+		slog.Error("Transaction.TopMerchants: query failed", "error", err)
+		response.Failed("查询失败", c)
+		return
+	}
+	if results == nil {
+		results = []models.MerchantRanking{}
+	}
+	response.Success("ok", results, c)
+}
+
+// HotMerchants  GET /api/v1/transactions/hot-merchants — 热门商家排行（Redis 缓存）
+func (tc *TransactionController) HotMerchants(c *gin.Context) {
+	userID, _ := c.Get("userId")
+	ctx := context.Background()
+	cacheKey := fmt.Sprintf("ranking:hot_merchants:%d", userID.(uint))
+	if cached, err := models.RDB.Get(ctx, cacheKey).Result(); err == nil {
+		var results []models.MerchantRanking
+		if json.Unmarshal([]byte(cached), &results) == nil {
+			response.Success("ok", results, c)
+			return
+		}
+	}
+	results, err := (models.Transaction{}).GetHotMerchants(userID.(uint))
+	if err != nil {
+		slog.Error("Transaction.HotMerchants: query failed", "error", err)
+		response.Failed("查询失败", c)
+		return
+	}
+	if results == nil {
+		results = []models.MerchantRanking{}
+	}
+	if data, err := json.Marshal(results); err == nil {
+		models.RDB.Set(ctx, cacheKey, string(data), 30*time.Minute)
+	}
+	response.Success("ok", results, c)
 }
 
 func (tc *TransactionController) MonthlyBreakdown(c *gin.Context) {

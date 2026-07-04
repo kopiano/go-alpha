@@ -271,6 +271,44 @@ type CategoryEntry struct {
 	Count      int     `json:"count"`
 }
 
+// MerchantRanking 商家消费排行
+type MerchantRanking struct {
+	Merchant string  `json:"merchant"`
+	Amount   float64 `json:"amount"`
+	Count    int     `json:"count"`
+}
+
+// GetTopMerchants 获取商家消费排行（前10）
+func (Transaction) GetTopMerchants(userID uint, year, month, paymentApp string) ([]MerchantRanking, error) {
+	var results []MerchantRanking
+	query := DB.Model(&Transaction{}).Where("user_id = ? AND type = 'expense'", userID)
+	if paymentApp != "" {
+		query = query.Where("payment_app = ?", paymentApp)
+	}
+	if year != "" {
+		query = query.Where("LEFT(time, 4) = ?", year)
+	}
+	if month != "" {
+		query = query.Where("LEFT(time, 7) = ?", year+"-"+month)
+	}
+	err := query.Select("merchant, SUM(amount) as amount, COUNT(*) as count").
+		Group("merchant").Order("amount DESC").Limit(10).Find(&results).Error
+	return results, err
+}
+
+// GetHotMerchants 获取热门商家（按交易频次排序），Redis 缓存
+func (Transaction) GetHotMerchants(userID uint) ([]MerchantRanking, error) {
+	var results []MerchantRanking
+	err := DB.Model(&Transaction{}).
+		Where("user_id = ? AND type = 'expense'", userID).
+		Select("merchant, SUM(amount) as amount, COUNT(*) as count").
+		Group("merchant").
+		Order("count DESC").
+		Limit(10).
+		Find(&results).Error
+	return results, err
+}
+
 // GetMonthlySummary 获取每月支出汇总
 func (Transaction) GetMonthlySummary(userID uint, year string) ([]MonthlyEntry, error) {
 	var entries []MonthlyEntry
