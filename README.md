@@ -115,20 +115,27 @@ $ cloudflared tunnel create alpha-api
 $ ls -la ~/.cloudflared   
 #-r--------    1 coulsonzero  staff   175 Jul  4 23:02 b53f33e1-5f51-4597-9cc1-51b6538a4455.json
 $ vim ~/.cloudflared/config.yml
-#tunnel: b53f33e1-5f51-4597-9cc1-51b6538a4455
+#tunnel: alpha-api
 #credentials-file: /Users/coulsonzero/.cloudflared/57eac48d-5987-4fbf-835f-32171c972429.json
 #protocol: http2  
+#
 #ingress:
 #  - hostname: api.coulsonzero.shop
 #    service: http://localhost:8080
-#
 #  - service: http_status:404
 $ cloudflared tunnel route dns alpha-api api.coulsonzero.shop
 $ go run main.go
 $ cloudflared tunnel run alpha-api
 ```
-`https://api.coulsonzero.shop/api/v1/user`
+react修改env后重新push部署
+```env
+VITE_API_URL=https://api.coulsonzero.shop/api/v1
+```
+然后重新运行`cloudflared tunnel run alpha-api`
+`curl https://api.coulsonzero.shop/api/v1/user`查看是否成功
 
+
+* 查看tunnel
 ```shell
 cloudflared tunnel list
 #ID                                   NAME          CREATED              CONNECTIONS 
