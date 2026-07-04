@@ -262,3 +262,65 @@ time="2026-07-05 00:57:48.744" level=INFO source=logger/gin.go msg=[HTTP] status
 time="2026-07-05 00:57:49.607" level=WARN source=logger/gin.go msg=[HTTP] status=404 method=GET path=/favicon.ico ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=56.583µs size=-1
 time="2026-07-05 00:57:49.989" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.046542ms size=791
 time="2026-07-05 00:57:53.029" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.064125ms size=791
+time="2026-07-05 01:10:19.368" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=24.833916ms size=791
+time="2026-07-05 01:10:19.862" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=1.994083ms size=791
+time="2026-07-05 01:10:29.408" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.778625ms size=791
+time="2026-07-05 01:16:49.678" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=9.679375ms size=791
+time="2026-07-05 01:18:30.370" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-05 01:18:30.386" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-05 01:18:30.567" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-05 01:18:30.569" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-05 01:18:30.569" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-05 01:18:30.571" level=INFO source=go-alpha/main.go msg="Server listening on :8080"
+time="2026-07-05 01:18:37.313" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12378
+time="2026-07-05 01:19:30.700" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=13.145ms size=791
+time="2026-07-05 01:20:15.123" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=6.269208ms size=791
+time="2026-07-05 01:20:16.492" level=WARN source=logger/gin.go msg=[HTTP] status=404 method=GET path=/api/v1/ping ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=11.833µs size=-1
+time="2026-07-05 01:20:21.964" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.029ms size=791
+time="2026-07-05 01:20:26.918" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=1.929334ms size=791
+time="2026-07-05 01:20:45.104" level=WARN source=logger/gin.go msg=[HTTP] status=404 method=GET path=/api/v1/ping ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=17.083µs size=-1
+time="2026-07-05 01:20:50.883" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=10.236583ms size=791
+time="2026-07-05 01:21:14.986" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/hot_search ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=675.581ms size=11881
+time="2026-07-05 01:27:15.119" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=74.167µs size=0
+time="2026-07-05 01:27:15.125" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/task ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=12.074708ms size=72
+time="2026-07-05 01:27:15.218" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=26.425208ms size=2966
+time="2026-07-05 01:27:15.644" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=311947
+time="2026-07-05 01:27:15.794" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/hot_search ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=682.677541ms size=11964
+time="2026-07-05 01:27:16.410" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/music ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=1.287140291s size=3413
+time="2026-07-05 01:27:17.729" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.087143459s size=973
+time="2026-07-05 01:27:27.995" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=10.806917ms size=2962
+time="2026-07-05 01:27:28.067" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=21.583µs size=0
+time="2026-07-05 01:27:28.068" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/hot_search ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=457.875µs size=11978
+time="2026-07-05 01:27:28.072" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/task ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.343125ms size=72
+time="2026-07-05 01:27:28.985" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/music ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=917.905917ms size=3413
+time="2026-07-05 01:27:29.407" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=311960
+time="2026-07-05 01:27:31.430" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.022958s size=974
+time="2026-07-05 01:27:57.954" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=21.379625ms size=2962
+time="2026-07-05 01:28:12.993" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=141.167µs size=0
+time="2026-07-05 01:28:15.074" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=9.759041ms size=129
+time="2026-07-05 01:28:27.916" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=14.465542ms size=2962
+time="2026-07-05 01:29:49.326" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=114.792µs size=0
+time="2026-07-05 01:29:49.382" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=50.916875ms size=2962
+time="2026-07-05 01:29:49.858" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=4.094917ms size=129
+time="2026-07-05 01:33:08.093" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=113.667µs size=0
+time="2026-07-05 01:33:08.118" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=18.691125ms size=2964
+time="2026-07-05 01:33:09.013" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=406.800375ms size=129
+time="2026-07-05 01:33:10.361" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=110.75µs size=0
+time="2026-07-05 01:33:10.372" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=11.605209ms size=2964
+time="2026-07-05 01:33:10.377" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/task ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=16.04025ms size=72
+time="2026-07-05 01:33:11.095" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/hot_search ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=728.85175ms size=11829
+time="2026-07-05 01:33:11.622" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/music ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=1.263072834s size=3413
+time="2026-07-05 01:33:13.818" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3866078-e59b-425e-a10a-aa731f6a9114 duration=312302
+time="2026-07-05 01:33:15.847" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=2.028779375s size=974
+time="2026-07-05 01:33:36.003" level=ERROR source=logger/gin.go msg=[HTTP] status=500 method=GET path=/api/v1/36kr ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=17.11621825s size=58
+time="2026-07-05 01:33:40.363" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=10.763375ms size=2962
+time="2026-07-05 01:33:40.513" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/hot_search ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=303.958µs size=11843
+time="2026-07-05 01:33:46.094" level=INFO source=logger/gin.go msg=[HTTP] status=204 method=OPTIONS path=/api/v1/visit/heartbeat ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=48.291µs size=0
+time="2026-07-05 01:33:46.107" level=WARN source=logger/gin.go msg=[HTTP] status=404 method=GET path=/api/v1/visitor/list ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=12.25µs size=-1
+time="2026-07-05 01:33:46.109" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor_daily ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=4.4475ms size=493
+time="2026-07-05 01:33:46.114" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/user ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=1.6065ms size=791
+time="2026-07-05 01:33:46.117" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=12.997333ms size=2962
+time="2026-07-05 01:33:46.626" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=POST path=/api/v1/visit/heartbeat ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=4.210125ms size=129
+time="2026-07-05 01:33:46.654" level=ERROR source=logger/gin.go msg=[HTTP] status=500 method=GET path=/api/v1/36kr ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=16.930187375s size=58
+time="2026-07-05 01:33:46.659" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=5.713ms size=2821
+time="2026-07-05 01:34:16.144" level=INFO source=logger/gin.go msg=[HTTP] status=200 method=GET path=/api/v1/visitor ip=2409:8929:4af8:4466:9981:9dee:1fe6:587c took=11.012833ms size=2962

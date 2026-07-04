@@ -2,8 +2,8 @@
 push:
 	@bash push.sh
 
-run:
-	@go run main.go
+cloudflare:
+	@cloudflared tunnel run api-test
 
 # (首次使用)启动服务器
 docker-build:
@@ -23,3 +23,5 @@ log-50:
 
 log:
 	@docker compose logs backend
+
+
