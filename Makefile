@@ -1,7 +1,3 @@
-# shell: make push
-push:
-	@bash push.sh
-
 # (首次使用)启动服务器
 docker-build:
 	@docker compose up -d	# error先执行: docker builder prune -f
