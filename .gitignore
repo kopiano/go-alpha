@@ -1,10 +1,11 @@
 /.claude
 /.idea
-/assets/avatar/
-/assets/docs/
-
-# 微博热搜数据缓存（自动生成，不进 Git）
-data/
+#/assets/avatar/
+#/assets/docs/
 
 # Go build cache
 .cache/
+<<<<<<< Updated upstream
+.env
+*.pyc
+__pycache__/
