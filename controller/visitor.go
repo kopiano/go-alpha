@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,33 @@ import (
 	"go-alpha/models"
 	"go-alpha/response"
 )
+
+// IP 地理定位缓存（内存，TTL 6 小时）
+var (
+	ipCache   = make(map[string]*ipCacheEntry)
+	ipCacheMu sync.RWMutex
+)
+
+type ipCacheEntry struct {
+	loc       ipLocation
+	expiresAt time.Time
+}
+
+func getCachedIPLocation(ip string) (ipLocation, bool) {
+	ipCacheMu.RLock()
+	defer ipCacheMu.RUnlock()
+	e, ok := ipCache[ip]
+	if !ok || time.Now().After(e.expiresAt) {
+		return ipLocation{}, false
+	}
+	return e.loc, true
+}
+
+func setCachedIPLocation(ip string, loc ipLocation) {
+	ipCacheMu.Lock()
+	defer ipCacheMu.Unlock()
+	ipCache[ip] = &ipCacheEntry{loc: loc, expiresAt: time.Now().Add(6 * time.Hour)}
+}
 
 type ipLocation struct {
 	Country  string `json:"country"`
@@ -83,12 +111,15 @@ func getClientIP(c *gin.Context) string {
 }
 
 func getIPLocation(ip string) ipLocation {
-	client := http.Client{Timeout: 2 * time.Second}
 	ip = strings.TrimSpace(ip)
 	if ip == "" || isPrivateIP(ip) {
 		return ipLocation{Country: "局域网", Location: "局域网"}
 	}
+	if loc, ok := getCachedIPLocation(ip); ok {
+		return loc
+	}
 
+	client := http.Client{Timeout: 2 * time.Second}
 	resp, err := client.Get(fmt.Sprintf("http://ip-api.com/json/%s?fields=country,city", ip))
 	if err != nil {
 		return ipLocation{}
@@ -120,7 +151,9 @@ func getIPLocation(ip string) ipLocation {
 	default:
 		loc = country + " " + city
 	}
-	return ipLocation{Country: country, City: city, Location: loc}
+	result := ipLocation{Country: country, City: city, Location: loc}
+	setCachedIPLocation(ip, result)
+	return result
 }
 
 func visitorLocationData(c *gin.Context) gin.H {
