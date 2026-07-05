@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -32,8 +32,17 @@ func NewAuthController() *authController {
 const avatarDir = "/app/assets/avatar"
 
 func (c *authController) Me(ctx *gin.Context) {
-	userId, _ := ctx.Get("userId")
-	user := models.User{}.GetUserById(int(userId.(uint)))
+	userId, ok := ctx.Get("userId")
+	if !ok {
+		response.Failed("未登录", ctx)
+		return
+	}
+	id, ok := userId.(uint)
+	if !ok || id == 0 {
+		response.Failed("登录信息无效", ctx)
+		return
+	}
+	user := models.User{}.GetUserById(int(id))
 	if user.ID == 0 {
 		response.Failed("用户不存在", ctx)
 		return
@@ -55,9 +64,10 @@ func (c *authController) Login(ctx *gin.Context) {
 		Password string `json:"password"`
 	}
 	if err := ctx.ShouldBindJSON(&form); err != nil {
-		response.Failed("登录失败，参数错误", ctx)
+		response.Failed("参数错误", ctx)
 		return
 	}
+	form.Username = strings.TrimSpace(form.Username)
 
 	user := models.User{}.GetUserByName(form.Username)
 	if user.ID == 0 {
@@ -78,10 +88,14 @@ func (c *authController) Login(ctx *gin.Context) {
 	}
 
 	// update status to active on login
-	models.DB.Model(user).Updates(map[string]any{
+	if err := models.DB.Model(user).Updates(map[string]any{
 		"status":        "active",
 		"last_login_at": time.Now(),
-	})
+	}).Error; err != nil {
+		slog.Error("Login: update user status failed", "error", err)
+		response.Failed("登录失败", ctx)
+		return
+	}
 
 	// 清除聊天联系人缓存，使对方立即看到上线状态
 	invalidateChatUserInfoCache(user.ID)
@@ -100,13 +114,26 @@ func (c *authController) Login(ctx *gin.Context) {
 }
 
 func (c *authController) Logout(ctx *gin.Context) {
-	userId, _ := ctx.Get("userId")
-	id := int(userId.(uint))
+	userId, ok := ctx.Get("userId")
+	if !ok {
+		response.Failed("未登录", ctx)
+		return
+	}
+	id, ok := userId.(uint)
+	if !ok || id == 0 {
+		response.Failed("登录信息无效", ctx)
+		return
+	}
 
 	result := models.DB.Model(&models.User{}).Where("id = ?", id).Updates(map[string]any{
 		"status":        "inactive",
 		"last_login_at": time.Now().Add(-10 * time.Minute), // 退出后标记为 10 分钟前，立刻离线
 	})
+	if result.Error != nil {
+		slog.Error("Logout update failed", "error", result.Error, "id", id)
+		response.Failed("退出失败", ctx)
+		return
+	}
 	slog.Info("Logout update", "id", id, "rows_affected", result.RowsAffected)
 
 	// 清除聊天联系人缓存，使对方立即看到离线状态
@@ -116,8 +143,17 @@ func (c *authController) Logout(ctx *gin.Context) {
 }
 
 func (c *authController) SettingUser(ctx *gin.Context) {
-	userId, _ := ctx.Get("userId")
-	user := models.User{}.GetUserById(int(userId.(uint)))
+	userId, ok := ctx.Get("userId")
+	if !ok {
+		response.Failed("未登录", ctx)
+		return
+	}
+	id, ok := userId.(uint)
+	if !ok || id == 0 {
+		response.Failed("登录信息无效", ctx)
+		return
+	}
+	user := models.User{}.GetUserById(int(id))
 	if user.ID == 0 {
 		response.Failed("用户不存在", ctx)
 		return
@@ -154,6 +190,10 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 		updates["username"] = username
 	}
 	if email != "" {
+		if !strings.Contains(email, "@") {
+			response.Failed("邮箱格式不正确", ctx)
+			return
+		}
 		updates["email"] = email
 	}
 	if password != "" {
@@ -227,7 +267,7 @@ func (c *authController) Register(ctx *gin.Context) {
 			Email    string `json:"email"`
 		}
 		if err := ctx.ShouldBindJSON(&form); err != nil {
-			response.Failed("注册失败，参数错误", ctx)
+			response.Failed("参数错误", ctx)
 			return
 		}
 		username = form.Username
@@ -239,8 +279,15 @@ func (c *authController) Register(ctx *gin.Context) {
 		email = ctx.PostForm("email")
 	}
 
+	username = strings.TrimSpace(username)
+	password = strings.TrimSpace(password)
+	email = strings.TrimSpace(email)
 	if username == "" || password == "" {
 		response.Failed("用户名和密码不能为空", ctx)
+		return
+	}
+	if email != "" && !strings.Contains(email, "@") {
+		response.Failed("邮箱格式不正确", ctx)
 		return
 	}
 

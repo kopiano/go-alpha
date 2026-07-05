@@ -32,6 +32,8 @@ func SetupRouter() *gin.Engine {
 	// CORS
 	r.Use(middleware.CORS())
 
+	// avatars
+
 	// Health check
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
@@ -48,16 +50,16 @@ func SetupRouter() *gin.Engine {
 			auth.GET("/me", middleware.AuthRequired(), authController.Me)
 			auth.POST("/setting_user", middleware.AuthRequired(), authController.SettingUser)
 		}
-		// avatars
 		v1.Static("/avatar", "/app/assets/avatar")
 		user := v1.Group("/user")
 		{
 			user.GET("", userController.GetAllUsers)
-			user.GET("/:id", userController.GetUserById)
-			user.GET("/name/:name", userController.GetUserByName)
-			user.POST("", userController.AddUser)
-			user.PUT("/:id", userController.UpdateUser)
-			user.DELETE("/:id", userController.DeleteUser)
+			// 暂时用不上
+			// user.GET("/:id", userController.GetUserById)
+			// user.GET("/name/:name", userController.GetUserByName)
+			// user.POST("", userController.AddUser)
+			// user.PUT("/:id", userController.UpdateUser)
+			// user.DELETE("/:id", userController.DeleteUser)
 		}
 		// Music
 		music := v1.Group("/music")
@@ -120,7 +122,7 @@ func SetupRouter() *gin.Engine {
 			chat.GET("/:id/messages", middleware.AuthRequired(), controller.GetMessages)          // 加载历史消息
 			chat.POST("/messages", middleware.AuthRequired(), controller.PostMessage)             // 发送消息
 			chat.PUT("/:id/read", middleware.AuthRequired(), controller.MarkConversationRead)     // 标记已读
-			chat.GET("/ws", func(c *gin.Context) { // WebSocket
+			chat.GET("/ws", func(c *gin.Context) {                                                // WebSocket
 				controller.HandleWebSocket(c.Writer, c.Request)
 			})
 		}
