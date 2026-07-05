@@ -1,7 +1,4 @@
-#! /bin/bash
-
 set -e
-
 git checkout dev
 git add . && git status
 # shellcheck disable=SC2162

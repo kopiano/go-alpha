@@ -28,7 +28,7 @@ def scan_music_files() -> list[dict]:
         results.append({
             "title": title.strip(),
             "artist": artist.strip(),
-            "src": f"/api/v1/music/file/{fname}",
+            "file": fname,
         })
     return results
 
