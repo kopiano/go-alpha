@@ -21,6 +21,8 @@ services:
       MYSQL_DB: app
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      OPENWEATHER_KEY: ${OPENWEATHER_KEY}
+      WEATHERAPI_KEY: ${WEATHERAPI_KEY}
     restart: always
     volumes:
       - ./assets/avatar:/app/assets/avatar
