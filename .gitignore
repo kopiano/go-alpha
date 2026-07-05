@@ -2,7 +2,7 @@
 /.idea
 #/assets/avatar/
 #/assets/docs/
-
+/assets/music
 # Go build cache
 .cache/
 .env

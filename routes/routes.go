@@ -80,6 +80,7 @@ func SetupRouter() *gin.Engine {
 
 	// Music
 	r.GET("/api/v1/music", controller.MusicList)
+	r.Static("/api/v1/music/file", "/app/assets/music")
 
 	// Visitor stats (Cookie/Session + uuid + Redis)
 	r.POST("/api/v1/visit", controller.RecordVisit)
