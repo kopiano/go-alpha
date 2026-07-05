@@ -63,7 +63,10 @@ func SetupRouter() *gin.Engine {
 
 	// Hot search
 	r.GET("/api/v1/hot_search", controller.HotSearch)
-	r.GET("/api/v1/36kr", controller.Kr36Hot)
+	// r.GET("/api/v1/36kr", controller.Kr36Hot)	// 36kr改用字节火山引擎需要真人滑块验证，无法爬取，接口弃用
+	r.GET("/api/v1/36kr", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "因36kr改用字节火山引擎需要真人滑块验证，接口已弃用"})
+	})
 	r.GET("/api/v1/weather", controller.GetWeather)
 
 	// Task
@@ -110,7 +113,7 @@ func SetupRouter() *gin.Engine {
 		chatGroup.GET("/:id/messages", middleware.AuthRequired(), controller.GetMessages)          // 加载历史消息
 		chatGroup.POST("/messages", middleware.AuthRequired(), controller.PostMessage)             // 发送消息
 		chatGroup.PUT("/:id/read", middleware.AuthRequired(), controller.MarkConversationRead)     // 标记已读
-		chatGroup.GET("/ws", func(c *gin.Context) {                                                // WebSocket
+		chatGroup.GET("/ws", func(c *gin.Context) { // WebSocket
 			controller.HandleWebSocket(c.Writer, c.Request)
 		})
 	}
@@ -125,8 +128,8 @@ func SetupRouter() *gin.Engine {
 		transactionGroup.GET("/summary", transactionController.Summary)              // GET  /api/v1/transactions/summary
 		transactionGroup.GET("/months", transactionController.Months)                // GET  /api/v1/transactions/months
 		transactionGroup.GET("/categories", transactionController.CategoryBreakdown) // GET  /api/v1/transactions/categories
-		transactionGroup.GET("/top-merchants", transactionController.TopMerchants)     // GET  /api/v1/transactions/top-merchants
-		transactionGroup.GET("/hot-merchants", transactionController.HotMerchants)       // GET  /api/v1/transactions/hot-merchants
+		transactionGroup.GET("/top-merchants", transactionController.TopMerchants)   // GET  /api/v1/transactions/top-merchants
+		transactionGroup.GET("/hot-merchants", transactionController.HotMerchants)   // GET  /api/v1/transactions/hot-merchants
 		transactionGroup.GET("/monthly", transactionController.MonthlyBreakdown)     // GET  /api/v1/transactions/monthly
 		transactionGroup.DELETE("", transactionController.Delete)                    // DELETE /api/v1/transactions
 	}

@@ -3,8 +3,8 @@ FROM golang:1.26-bookworm
 ENV GO111MODULE=on \
     GOPROXY=https://goproxy.cn,direct
 
-RUN apt-get install -y python3-pip || true && \
-    python3 -m pip install requests cloudscraper --break-system-packages || true
+RUN apt-get update && apt-get install -y python3-pip python3-requests && \
+    python3 -m pip install cloudscraper --break-system-packages || true
 
 WORKDIR /app
 COPY go.mod go.sum ./
