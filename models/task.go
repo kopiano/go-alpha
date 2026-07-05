@@ -17,15 +17,15 @@ type Task struct {
 	Active    *bool          `gorm:"default:true" json:"active"`
 }
 
-func (Task) GetAllTasks() *[]Task {
+func (Task) GetTasksByOwner(userID uint) *[]Task {
 	var tasks []Task
-	DB.Order("created_at desc").Find(&tasks)
+	DB.Where("user_id = ?", userID).Order("created_at desc").Find(&tasks)
 	return &tasks
 }
 
-func (Task) GetTaskById(id uint) *Task {
+func (Task) GetTaskByIdAndOwner(id, userID uint) *Task {
 	var task Task
-	DB.First(&task, id)
+	DB.Where("id = ? AND user_id = ?", id, userID).First(&task)
 	return &task
 }
 

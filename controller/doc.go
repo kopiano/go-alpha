@@ -15,11 +15,13 @@ import (
 const docDir = "/app/assets/docs"
 
 type docFile struct {
-	Tag     string `json:"tag"`
-	Title   string `json:"title"`
-	Content string `json:"content"`
-	Path    string `json:"path"`
-	Time    string `json:"time"`
+	Tag       string `json:"tag"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	Path      string `json:"path"`
+	Time      string `json:"time"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
 }
 
 type tagGroup struct {
@@ -57,15 +59,20 @@ func (d *DocController) Save(ctx *gin.Context) {
 	filename := strings.ReplaceAll(form.Title, " ", "_") + ".md"
 	savePath := filepath.Join(dir, filename)
 
+	now := time.Now()
 	if err := os.WriteFile(savePath, []byte(form.Content), 0644); err != nil {
 		slog.Error("Doc.Save: WriteFile failed", "error", err)
 		response.Failed("保存文件失败", ctx)
 		return
 	}
 
+	_ = os.Chtimes(savePath, now, now)
+
 	response.Success("保存成功", gin.H{
-		"path": filepath.Join("/docs", tag, filename),
-		"time": time.Now().Format("2006-01-02 15:04:05"),
+		"path":      filepath.Join("/docs", tag, filename),
+		"time":      now.Format("2006-01-02 15:04:05"),
+		"createdAt": now.Format("2006-01-02 15:04:05"),
+		"updatedAt": now.Format("2006-01-02 15:04:05"),
 	}, ctx)
 }
 
@@ -114,13 +121,21 @@ func (d *DocController) List(ctx *gin.Context) {
 				if err != nil {
 					continue
 				}
+				createdAt := info.ModTime()
+				updatedAt := info.ModTime()
+				if stat, err := os.Stat(filepath.Join(tagDir, f.Name())); err == nil {
+					createdAt = stat.ModTime()
+					updatedAt = stat.ModTime()
+				}
 				title := strings.TrimSuffix(f.Name(), ".md")
 				items = append(items, docFile{
-					Tag:     tag,
-					Title:   title,
-					Content: string(content),
-					Path:    filepath.Join("/docs", tag, f.Name()),
-					Time:    info.ModTime().Format("2006-01-02 15:04:05"),
+					Tag:       tag,
+					Title:     title,
+					Content:   string(content),
+					Path:      filepath.Join("/docs", tag, f.Name()),
+					Time:      updatedAt.Format("2006-01-02 15:04:05"),
+					CreatedAt: createdAt.Format("2006-01-02 15:04:05"),
+					UpdatedAt: updatedAt.Format("2006-01-02 15:04:05"),
 				})
 			}
 			if len(items) == 0 {

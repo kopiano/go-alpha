@@ -37,104 +37,109 @@ func SetupRouter() *gin.Engine {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
-	// avatars
-	r.Static("/api/v1/avatar", "/app/assets/avatar")
-
-	// auth
-	authGroup := r.Group("/api/v1")
+	v1 := r.Group("api/v1")
 	{
-		authGroup.POST("/login", authController.Login)
-		authGroup.POST("/register", authController.Register)
-		authGroup.POST("/logout", middleware.AuthRequired(), authController.Logout)
-		authGroup.GET("/me", middleware.AuthRequired(), authController.Me)
-		authGroup.POST("/setting_user", middleware.AuthRequired(), authController.SettingUser)
-	}
-
-	// User CRUD
-	userGroup := r.Group("/api/v1")
-	{
-		userGroup.GET("/user", userController.GetAllUsers)
-		userGroup.GET("/user/:id", userController.GetUserById)
-		userGroup.GET("/user/name/:name", userController.GetUserByName)
-		userGroup.POST("/user", userController.AddUser)
-		userGroup.PUT("/user/:id", userController.UpdateUser)
-		userGroup.DELETE("/user/:id", userController.DeleteUser)
-	}
-
-	// Hot search
-	r.GET("/api/v1/hot_search", controller.HotSearch)
-	// r.GET("/api/v1/36kr", controller.Kr36Hot)	// 36kr改用字节火山引擎需要真人滑块验证，无法爬取，接口弃用
-	r.GET("/api/v1/36kr", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "因36kr改用字节火山引擎需要真人滑块验证，接口已弃用"})
-	})
-	r.GET("/api/v1/weather", controller.GetWeather)
-
-	// Task
-	taskGroup := r.Group("/api/v1")
-	{
-		taskGroup.GET("/task", taskController.ListTasks)
-		taskGroup.POST("/task", taskController.AddTask)
-		taskGroup.PUT("/task/:id", taskController.ToggleActive)
-		taskGroup.DELETE("/task/:id", taskController.DeleteTask)
-	}
-
-	// Music
-	r.GET("/api/v1/music", controller.MusicList)
-	r.Static("/api/v1/music/file", "/app/assets/music")
-
-	// Visitor stats (Cookie/Session + uuid + Redis)
-	r.POST("/api/v1/visit", controller.RecordVisit)
-	r.POST("/api/v1/visit/heartbeat", controller.VisitorHeartbeat)
-	r.GET("/api/v1/visitor", controller.GetVisitor)
-	r.GET("/api/v1/visitor_daily", controller.VisitorDaily)
-	r.GET("/api/v1/visitor_pv_uv", controller.VisitorPvUv)
-
-	// Doc
-	docGroup := r.Group("/api/v1/doc")
-	{
-		docGroup.GET("/list", docController.List)
-		docGroup.POST("/save", docController.Save)
-	}
-
-	// Comment
-	r.GET("/api/v1/comment", commentController.ListComments)
-	r.POST("/api/v1/comment", commentController.AddComment)
-	r.PUT("/api/v1/comment/:id/like", middleware.AuthRequired(), commentController.LikeComment)      // 点赞
-	r.DELETE("/api/v1/comment/:id/like", middleware.AuthRequired(), commentController.UnlikeComment) // 取消点赞
-
-	// FAQ
-	r.GET("/api/v1/faq", faqController.ListFAQ)
-	r.POST("/api/v1/faq", faqController.AddFAQ)
-
-	// Chat — New conversation system
-	chatGroup := r.Group("/api/v1/chat")
-	{
-		chatGroup.GET("/user_info", middleware.AuthRequired(), controller.GetChatUserInfo)         // 联系人列表
-		chatGroup.GET("/team", middleware.AuthRequired(), controller.GetTeam)                      // 群聊信息
-		chatGroup.POST("/conversations", middleware.AuthRequired(), controller.CreateConversation) // 获取私聊的会话I，拿到这个id才能加载历史消息和标记已读
-		chatGroup.GET("/:id/messages", middleware.AuthRequired(), controller.GetMessages)          // 加载历史消息
-		chatGroup.POST("/messages", middleware.AuthRequired(), controller.PostMessage)             // 发送消息
-		chatGroup.PUT("/:id/read", middleware.AuthRequired(), controller.MarkConversationRead)     // 标记已读
-		chatGroup.GET("/ws", func(c *gin.Context) { // WebSocket
-			controller.HandleWebSocket(c.Writer, c.Request)
+		auth := v1.Group("/auth")
+		{
+			auth.POST("/login", authController.Login)
+			auth.POST("/register", authController.Register)
+			auth.POST("/logout", middleware.AuthRequired(), authController.Logout)
+			// 刷新用户信息，判断当前是否已登录，显示头像、用户名、在线状态等
+			auth.GET("/me", middleware.AuthRequired(), authController.Me)
+			auth.POST("/setting_user", middleware.AuthRequired(), authController.SettingUser)
+		}
+		// avatars
+		v1.Static("/avatar", "/app/assets/avatar")
+		user := v1.Group("/user")
+		{
+			user.GET("", userController.GetAllUsers)
+			user.GET("/:id", userController.GetUserById)
+			user.GET("/name/:name", userController.GetUserByName)
+			user.POST("", userController.AddUser)
+			user.PUT("/:id", userController.UpdateUser)
+			user.DELETE("/:id", userController.DeleteUser)
+		}
+		// Music
+		music := v1.Group("/music")
+		{
+			music.GET("", controller.MusicList)
+			music.Static("/file", "/app/assets/music")
+		}
+		// weather
+		v1.GET("/weather", controller.GetWeather)
+		// task
+		task := v1.Group("/task")
+		{
+			task.GET("", taskController.ListTasks)
+			task.POST("", taskController.AddTask)
+			task.PUT("/:id", taskController.ToggleActive)
+			task.DELETE("/:id", taskController.DeleteTask)
+		}
+		// news
+		v1.GET("/hot_search", controller.HotSearch)
+		v1.GET("/36kr", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "因36kr改用字节火山引擎需要真人滑块验证，接口已弃用"})
 		})
+		// Visitor stats (Cookie/Session + uuid + Redis)
+		visitor := v1.Group("/visitor")
+		{
+			// 获取访客统计总览和访客列表，包括总 PV/UV、今日 PV/UV、近 7 天 UV、活跃访客数、总浏览时长，以及当前访客信息
+			visitor.GET("", controller.GetVisitor)
+			// 获取每日访客统计明细，返回 visitor_summary 表里的所有日期数据，适合做日趋势图
+			visitor.GET("/daily", controller.VisitorDaily)
+			// 统计所有历史日期的 PV 和 UV 总和，返回一个汇总结果
+			visitor.GET("/pv_uv", controller.VisitorPvUv)
+			// 记录一次访问行为。通常是前端首次进入页面时调用，用来新增或更新访客记录，同时累加 PV/UV，并写入访客位置、设备、浏览器、停留信息等
+			visitor.POST("/visit", controller.RecordVisit)
+			// 心跳上报接口。前端定时调用，用来累计浏览时长、更新最后访问时间，必要时同步用户名
+			visitor.POST("/heartbeat", controller.VisitorHeartbeat)
+		}
+		doc := v1.Group("/doc")
+		{
+			doc.GET("/list", docController.List)
+			doc.POST("/save", docController.Save)
+		}
+		comment := v1.Group("/comment")
+		{
+			comment.GET("", commentController.ListComments)
+			comment.POST("", commentController.AddComment)
+			comment.PUT("/:id/like", middleware.AuthRequired(), commentController.LikeComment)      // 点赞
+			comment.DELETE("/:id/like", middleware.AuthRequired(), commentController.UnlikeComment) // 取消点赞
+		}
+		faq := v1.Group("/faq")
+		{
+			faq.GET("", faqController.ListFAQ)
+			faq.POST("", faqController.AddFAQ)
+		}
+		// Chat — New conversation system
+		chat := v1.Group("/chat")
+		{
+			chat.GET("/user_info", middleware.AuthRequired(), controller.GetChatUserInfo)         // 联系人列表
+			chat.GET("/team", middleware.AuthRequired(), controller.GetTeam)                      // 群聊信息
+			chat.POST("/conversations", middleware.AuthRequired(), controller.CreateConversation) // 获取私聊的会话I，拿到这个id才能加载历史消息和标记已读
+			chat.GET("/:id/messages", middleware.AuthRequired(), controller.GetMessages)          // 加载历史消息
+			chat.POST("/messages", middleware.AuthRequired(), controller.PostMessage)             // 发送消息
+			chat.PUT("/:id/read", middleware.AuthRequired(), controller.MarkConversationRead)     // 标记已读
+			chat.GET("/ws", func(c *gin.Context) { // WebSocket
+				controller.HandleWebSocket(c.Writer, c.Request)
+			})
+		}
+		// Transaction
+		transaction := r.Group("/transactions")
+		transaction.Use(middleware.AuthRequired())
+		{
+			transaction.GET("", transactionController.List)
+			transaction.GET("/summary", transactionController.Summary)
+			transaction.GET("/months", transactionController.Months)
+			transaction.GET("/categories", transactionController.CategoryBreakdown)
+			transaction.GET("/top-merchants", transactionController.TopMerchants)
+			transaction.GET("/hot-merchants", transactionController.HotMerchants)
+			transaction.GET("/monthly", transactionController.MonthlyBreakdown)
+			transaction.POST("/filter", transactionController.FilterByMonth)
+			transaction.POST("/import", transactionController.ImportCSV)
+			transaction.DELETE("", transactionController.Delete)
+		}
 	}
-
-	// Transaction
-	transactionGroup := r.Group("/api/v1/transactions")
-	transactionGroup.Use(middleware.AuthRequired())
-	{
-		transactionGroup.GET("", transactionController.List)                         // GET  /api/v1/transactions
-		transactionGroup.POST("/filter", transactionController.FilterByMonth)        // POST /api/v1/transactions/filter
-		transactionGroup.POST("/import", transactionController.ImportCSV)            // POST /api/v1/transactions/import
-		transactionGroup.GET("/summary", transactionController.Summary)              // GET  /api/v1/transactions/summary
-		transactionGroup.GET("/months", transactionController.Months)                // GET  /api/v1/transactions/months
-		transactionGroup.GET("/categories", transactionController.CategoryBreakdown) // GET  /api/v1/transactions/categories
-		transactionGroup.GET("/top-merchants", transactionController.TopMerchants)   // GET  /api/v1/transactions/top-merchants
-		transactionGroup.GET("/hot-merchants", transactionController.HotMerchants)   // GET  /api/v1/transactions/hot-merchants
-		transactionGroup.GET("/monthly", transactionController.MonthlyBreakdown)     // GET  /api/v1/transactions/monthly
-		transactionGroup.DELETE("", transactionController.Delete)                    // DELETE /api/v1/transactions
-	}
-
+	// v1 end
 	return r
 }
