@@ -5,7 +5,6 @@
 
 # Go build cache
 .cache/
-<<<<<<< Updated upstream
 .env
 *.pyc
 __pycache__/
