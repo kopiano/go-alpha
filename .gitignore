@@ -8,3 +8,4 @@ data/
 
 # Go build cache
 .cache/
+.env

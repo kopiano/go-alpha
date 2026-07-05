@@ -15,6 +15,11 @@ type Weather struct {
 	TempCurrent float64   `json:"temp_current"`
 	AQI         int       `json:"aqi"`
 	Condition   string    `gorm:"type:varchar(100)" json:"condition"`
+	Humidity    string    `gorm:"type:varchar(10)" json:"humidity"`
+	Wind        string    `gorm:"type:varchar(10)" json:"wind"`
+	UV          string    `gorm:"type:varchar(5)" json:"uv"`
+	Sunrise     string    `gorm:"type:varchar(20)" json:"sunrise"`
+	Sunset      string    `gorm:"type:varchar(20)" json:"sunset"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
@@ -28,6 +33,11 @@ func UpsertWeather(w *Weather) error {
 			"temp_current": w.TempCurrent,
 			"aqi":          w.AQI,
 			"condition":    w.Condition,
+			"humidity":     w.Humidity,
+			"wind":         w.Wind,
+			"uv":           w.UV,
+			"sunrise":      w.Sunrise,
+			"sunset":       w.Sunset,
 		}).
 		FirstOrCreate(w).Error
 }
@@ -44,4 +54,12 @@ func GetWeather(city string, date ...string) (*Weather, error) {
 		return nil, err
 	}
 	return &w, nil
+}
+
+// GetWeatherRange 查询指定城市日期范围内的天气（按日期升序）
+func GetWeatherRange(city, startDate, endDate string) ([]Weather, error) {
+	var list []Weather
+	err := DB.Where("city = ? AND date BETWEEN ? AND ?", city, startDate, endDate).
+		Order("date ASC").Find(&list).Error
+	return list, err
 }

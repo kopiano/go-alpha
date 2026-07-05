@@ -4,6 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: gin-backend
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     ports:
       - "8000:8080"
     depends_on:
