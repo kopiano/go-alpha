@@ -37,6 +37,8 @@ type TransactionFilter struct {
 	Type     string
 	Page     int
 	PageSize int
+	SortKey  string // "time" | "amount"
+	SortDir  string // "asc" | "desc"
 }
 
 type TransactionSummary struct {
@@ -183,7 +185,16 @@ func (Transaction) List(filter TransactionFilter) ([]Transaction, int64, error) 
 	}
 	offset := (filter.Page - 1) * filter.PageSize
 
-	err := query.Order("time DESC, id DESC").Offset(offset).Limit(filter.PageSize).Find(&txns).Error
+	// Dynamic sort
+	sortField := "time"
+	if filter.SortKey == "amount" {
+		sortField = "amount"
+	}
+	sortDir := "DESC"
+	if filter.SortDir == "asc" {
+		sortDir = "ASC"
+	}
+	err := query.Order(sortField+" "+sortDir+", id DESC").Offset(offset).Limit(filter.PageSize).Find(&txns).Error
 	return txns, total, err
 }
 

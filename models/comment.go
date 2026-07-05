@@ -111,3 +111,11 @@ func (Comment) React(id uint, action string) (*Comment, error) {
 		return nil, gorm.ErrInvalidData
 	}
 }
+
+func (Comment) LikeOnce(id uint) (*Comment, error) {
+	return Comment{}.Like(id)
+}
+
+func (Comment) UnlikeOnce(id uint) (*Comment, error) {
+	return Comment{}.Unlike(id)
+}

@@ -99,7 +99,8 @@ func SetupRouter() *gin.Engine {
 	// Comment
 	r.GET("/api/v1/comment", commentController.ListComments)
 	r.POST("/api/v1/comment", commentController.AddComment)
-	r.POST("/api/v1/comment/:id/likes", commentController.LikesComment) // 点赞
+	r.PUT("/api/v1/comment/:id/like", middleware.AuthRequired(), commentController.LikeComment)      // 点赞
+	r.DELETE("/api/v1/comment/:id/like", middleware.AuthRequired(), commentController.UnlikeComment) // 取消点赞
 
 	// FAQ
 	r.GET("/api/v1/faq", faqController.ListFAQ)

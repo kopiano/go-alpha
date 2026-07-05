@@ -25,7 +25,6 @@
 | --- | --- | --- |
 | GET | /api/v1/comment | 获取所有 Markdown 文档评论 |
 | POST | /api/v1/comment | 提交 Markdown 文档评论 |
-| POST | /api/v1/comment/:id/likes | 评论点赞/取消点赞 |
 
 兼容路径：`GET /api/v1/commment`
 

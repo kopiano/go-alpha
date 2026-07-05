@@ -35,7 +35,7 @@ func SetupMySQL() *gorm.DB {
 	}
 	slog.Info("MySQL connected successfully")
 	DB = db
-	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &Faq{}, &Message{}, &Transaction{}, &Weather{}, &Group{}, &GroupMember{})
+	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &CommentLike{}, &Faq{}, &Message{}, &Transaction{}, &Weather{}, &Group{}, &GroupMember{})
 
 	// Migration: drop old tables (data inlined into messages)
 	if DB.Migrator().HasTable("conversation_read") {

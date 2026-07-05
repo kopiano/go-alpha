@@ -122,7 +122,9 @@ func (tc *TransactionController) List(c *gin.Context) {
 	category := c.Query("category")
 	txType := c.Query("type")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "50"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	sortKey := c.DefaultQuery("sort_key", "time")
+	sortDir := c.DefaultQuery("sort_dir", "desc")
 
 	filter := models.TransactionFilter{
 		UserID:   userID.(uint),
@@ -132,6 +134,8 @@ func (tc *TransactionController) List(c *gin.Context) {
 		Type:     txType,
 		Page:     page,
 		PageSize: pageSize,
+			SortKey:  sortKey,
+			SortDir:  sortDir,
 	}
 
 	txns, total, err := (models.Transaction{}).List(filter)
@@ -145,7 +149,7 @@ func (tc *TransactionController) List(c *gin.Context) {
 	}
 
 	summary, _ := (models.Transaction{}).GetSummary(userID.(uint), year, month)
-	response.Success("ok", gin.H{"list": txns, "total": total, "page": page, "pageSize": pageSize, "summary": summary}, c)
+	response.Success("ok", gin.H{"list": txns, "total": total, "page": filter.Page, "pageSize": filter.PageSize, "summary": summary}, c)
 }
 
 func (tc *TransactionController) FilterByMonth(c *gin.Context) {
@@ -178,7 +182,7 @@ func (tc *TransactionController) FilterByMonth(c *gin.Context) {
 		txns = []models.Transaction{}
 	}
 	summary, _ := (models.Transaction{}).GetSummary(userID.(uint), body.Year, body.Month)
-	response.Success("ok", gin.H{"list": txns, "total": total, "page": page, "pageSize": pageSize, "summary": summary}, c)
+	response.Success("ok", gin.H{"list": txns, "total": total, "page": filter.Page, "pageSize": filter.PageSize, "summary": summary}, c)
 }
 
 func (tc *TransactionController) Summary(c *gin.Context) {

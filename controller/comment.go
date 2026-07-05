@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"errors"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -11,7 +10,6 @@ import (
 
 	"go-alpha/models"
 	"go-alpha/response"
-	"gorm.io/gorm"
 )
 
 type CommentController struct{}
@@ -94,37 +92,9 @@ type reactionForm struct {
 	Action string `json:"action" binding:"required"`
 }
 
-func (CommentController) LikesComment(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		response.Failed("评论 ID 不正确", c)
-		return
-	}
-
-	var form reactionForm
-	if err := c.ShouldBindJSON(&form); err != nil {
-		response.Failed("参数错误，action 为必填", c)
-		return
-	}
-
-	action := strings.TrimSpace(form.Action)
-	comment, err := models.Comment{}.React(uint(id), action)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			response.Failed("评论不存在", c)
-			return
-		}
-		if errors.Is(err, gorm.ErrInvalidData) {
-			response.Failed("action 仅支持 likes 或 unlikes", c)
-			return
-		}
-		slog.Error("Comment.Likes failed", "error", err)
-		response.Failed("操作失败", c)
-		return
-	}
-
+func respondCommentReaction(c *gin.Context, comment *models.Comment, action string) {
 	message := "点赞成功"
-	if action == "unlikes" {
+	if action == "unlikes" || action == "delete" {
 		message = "取消点赞成功"
 	}
 
@@ -133,4 +103,89 @@ func (CommentController) LikesComment(c *gin.Context) {
 		"likes":      comment.LikeCount,
 		"like_count": comment.LikeCount,
 	}, c)
+}
+
+func getAuthUserID(c *gin.Context) (uint, bool) {
+	userID, ok := c.Get("userId")
+	if !ok {
+		response.Failed("未登录", c)
+		return 0, false
+	}
+	id, ok := userID.(uint)
+	if !ok || id == 0 {
+		response.Failed("未登录", c)
+		return 0, false
+	}
+	return id, true
+}
+
+func handleCommentReaction(c *gin.Context, action string) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Failed("评论 ID 不正确", c)
+		return
+	}
+
+	userID, ok := getAuthUserID(c)
+	if !ok {
+		return
+	}
+
+	exists, err := models.Comment{}.Exists(uint(id))
+	if err != nil {
+		slog.Error("Comment.Exists failed", "error", err)
+		response.Failed("操作失败", c)
+		return
+	}
+	if !exists {
+		response.Failed("评论不存在", c)
+		return
+	}
+
+	switch action {
+	case "likes":
+		likeModel := models.CommentLike{}
+		if err := likeModel.Add(uint(id), userID); err != nil {
+			slog.Error("CommentLike.Add failed", "error", err)
+			response.Failed("点赞失败", c)
+			return
+		}
+	case "unlikes":
+		likeModel := models.CommentLike{}
+		if err := likeModel.Remove(uint(id), userID); err != nil {
+			slog.Error("CommentLike.Remove failed", "error", err)
+			response.Failed("取消点赞失败", c)
+			return
+		}
+	default:
+		response.Failed("action 仅支持 likes 或 unlikes", c)
+		return
+	}
+
+	var comment models.Comment
+	if err := models.DB.First(&comment, uint(id)).Error; err != nil {
+		slog.Error("Comment fetch failed", "error", err)
+		response.Failed("操作失败", c)
+		return
+	}
+	respondCommentReaction(c, &comment, action)
+}
+
+func (CommentController) LikesComment(c *gin.Context) {
+	var form reactionForm
+	if err := c.ShouldBindJSON(&form); err != nil {
+		response.Failed("参数错误，action 为必填", c)
+		return
+	}
+
+	action := strings.TrimSpace(form.Action)
+	handleCommentReaction(c, action)
+}
+
+func (CommentController) LikeComment(c *gin.Context) {
+	handleCommentReaction(c, "likes")
+}
+
+func (CommentController) UnlikeComment(c *gin.Context) {
+	handleCommentReaction(c, "unlikes")
 }
