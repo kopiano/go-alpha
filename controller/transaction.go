@@ -145,7 +145,7 @@ func (tc *TransactionController) List(c *gin.Context) {
 	}
 
 	summary, _ := (models.Transaction{}).GetSummary(userID.(uint), year, month)
-	response.Success("ok", gin.H{"list": txns, "total": total, "summary": summary}, c)
+	response.Success("ok", gin.H{"list": txns, "total": total, "page": page, "pageSize": pageSize, "summary": summary}, c)
 }
 
 func (tc *TransactionController) FilterByMonth(c *gin.Context) {
@@ -178,7 +178,7 @@ func (tc *TransactionController) FilterByMonth(c *gin.Context) {
 		txns = []models.Transaction{}
 	}
 	summary, _ := (models.Transaction{}).GetSummary(userID.(uint), body.Year, body.Month)
-	response.Success("ok", gin.H{"list": txns, "total": total, "summary": summary}, c)
+	response.Success("ok", gin.H{"list": txns, "total": total, "page": page, "pageSize": pageSize, "summary": summary}, c)
 }
 
 func (tc *TransactionController) Summary(c *gin.Context) {
