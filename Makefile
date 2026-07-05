@@ -15,7 +15,7 @@ docker-restart:
 	@docker compose down -v && docker compose up -d --build
 
 cloudflare:
-	@cloudflared tunnel run api-test
+	@cloudflared tunnel run api-test	# 如果error: 关闭vpn
 
 #log-50:
 #	@docker compose logs --tail=50 backend
