@@ -69,6 +69,8 @@ func SetupRouter() *gin.Engine {
 		}
 		// weather
 		v1.GET("/weather", controller.GetWeather)
+		// holiday
+		v1.GET("/holiday", controller.GetHoliday)
 		// task
 		task := v1.Group("/task")
 		{
