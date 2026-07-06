@@ -26,7 +26,6 @@ services:
     restart: always
     volumes:
       - ./assets/avatar:/app/assets/avatar
-      - ./assets/docs:/app/assets/docs
 
   mysql:
     image: mysql:8.0

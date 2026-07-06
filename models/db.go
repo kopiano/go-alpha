@@ -35,7 +35,16 @@ func SetupMySQL() *gorm.DB {
 	}
 	slog.Info("MySQL connected successfully")
 	DB = db
-	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &CommentLike{}, &Faq{}, &Message{}, &Transaction{}, &Weather{}, &Group{}, &GroupMember{})
+	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &CommentLike{}, &Faq{}, &Message{}, &Transaction{}, &Weather{}, &Group{}, &GroupMember{}, &Md{})
+	if DB.Migrator().HasColumn(&Md{}, "visibility") {
+		DB.Exec("ALTER TABLE `md` MODIFY COLUMN `visibility` TINYINT(1) NOT NULL")
+	}
+	if DB.Migrator().HasColumn(&Md{}, "edit_permission") {
+		DB.Exec("ALTER TABLE `md` MODIFY COLUMN `edit_permission` TINYINT(1) NOT NULL")
+	}
+	if DB.Migrator().HasColumn(&Md{}, "contributors") {
+		DB.Exec("UPDATE `md` SET `contributors` = JSON_ARRAY(`user_id`) WHERE `contributors` IS NULL OR JSON_LENGTH(`contributors`) = 0")
+	}
 
 	// Migration: drop old tables (data inlined into messages)
 	if DB.Migrator().HasTable("conversation_read") {

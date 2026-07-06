@@ -1,17 +1,10 @@
 package models
 
 import (
-	"encoding/json"
-	"log/slog"
-	"os"
-	"path/filepath"
 	"time"
 
 	"gorm.io/gorm"
 )
-
-const faqDir = "/app/assets/faq"
-const faqFile = "faq.json"
 
 type Faq struct {
 	ID         uint           `gorm:"primarykey" json:"id"`
@@ -96,83 +89,4 @@ func SeedFaqs() {
 	for i := range seeds {
 		DB.Create(&seeds[i])
 	}
-}
-
-// GetAllFromFile reads FAQ data from assets/faq/faq.json
-func GetAllFromFile() ([]Faq, error) {
-	path := filepath.Join(faqDir, faqFile)
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var items []struct {
-		ID         uint   `json:"id"`
-		Title      string `json:"title"`
-		Answer     string `json:"answer"`
-		Difficulty string `json:"difficulty"`
-		Category   string `json:"category"`
-		CreatedAt  string `json:"created_at"`
-	}
-	if err := json.Unmarshal(data, &items); err != nil {
-		return nil, err
-	}
-
-	faqs := make([]Faq, 0, len(items))
-	for _, item := range items {
-		faqs = append(faqs, Faq{
-			ID:         item.ID,
-			Title:      item.Title,
-			Answer:     item.Answer,
-			Difficulty: item.Difficulty,
-			Category:   item.Category,
-		})
-	}
-	return faqs, nil
-}
-
-// SyncFaqToFile writes all DB FAQ records to assets/faq/faq.json
-func SyncFaqToFile() error {
-	faqs, err := Faq{}.GetAll()
-	if err != nil {
-		return err
-	}
-
-	type item struct {
-		ID         uint   `json:"id"`
-		Title      string `json:"title"`
-		Answer     string `json:"answer"`
-		Difficulty string `json:"difficulty"`
-		Category   string `json:"category"`
-		CreatedAt  string `json:"created_at"`
-	}
-
-	items := make([]item, 0, len(faqs))
-	for _, f := range faqs {
-		items = append(items, item{
-			ID:         f.ID,
-			Title:      f.Title,
-			Answer:     f.Answer,
-			Difficulty: f.Difficulty,
-			Category:   f.Category,
-			CreatedAt:  f.CreatedAt.Format("2006-01-02 15:04:05"),
-		})
-	}
-
-	data, err := json.MarshalIndent(items, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll(faqDir, 0755); err != nil {
-		return err
-	}
-
-	path := filepath.Join(faqDir, faqFile)
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return err
-	}
-
-	slog.Info("Faq.SyncToFile: done", "count", len(items))
-	return nil
 }

@@ -10,7 +10,7 @@ import (
 
 type FaqController struct{}
 
-// ListFAQ handles GET /api/v1/faq — reads from MySQL + syncs to JSON file
+// ListFAQ handles GET /api/v1/faq — reads from MySQL
 func (f *FaqController) ListFAQ(ctx *gin.Context) {
 	faqs, err := models.Faq{}.GetAll()
 	if err != nil {
@@ -23,15 +23,10 @@ func (f *FaqController) ListFAQ(ctx *gin.Context) {
 		faqs = []models.Faq{}
 	}
 
-	// 同步到 JSON 文件
-	if err := models.SyncFaqToFile(); err != nil {
-		slog.Error("Faq.List: JSON sync failed", "error", err)
-	}
-
 	response.Success("ok", faqs, ctx)
 }
 
-// AddFAQ handles POST /api/v1/faq — writes to MySQL + syncs to assets/faq/faq.json
+// AddFAQ handles POST /api/v1/faq — writes to MySQL
 func (f *FaqController) AddFAQ(ctx *gin.Context) {
 	var form struct {
 		Title      string `json:"title" binding:"required"`
@@ -67,12 +62,6 @@ func (f *FaqController) AddFAQ(ctx *gin.Context) {
 		slog.Error("Faq.Add: MySQL insert failed", "error", err)
 		response.Failed("添加FAQ失败", ctx)
 		return
-	}
-
-	// 2. Sync to assets/faq/faq.json
-	if err := models.SyncFaqToFile(); err != nil {
-		slog.Error("Faq.Add: JSON sync failed", "error", err)
-		// Non-fatal — MySQL write already succeeded
 	}
 
 	slog.Info("Faq.Add: success", "id", faq.ID, "title", faq.Title)

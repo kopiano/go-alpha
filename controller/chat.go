@@ -339,11 +339,13 @@ func GetChatUserInfo(c *gin.Context) {
 	// 尝试读 Redis 缓存
 	ctx := context.Background()
 	cacheKey := "chat:user_info:" + strconv.Itoa(int(userID))
-	if cached, err := models.RDB.Get(ctx, cacheKey).Result(); err == nil {
-		var data map[string]any
-		if json.Unmarshal([]byte(cached), &data) == nil {
-			response.Success("ok", data, c)
-			return
+	if models.RDB != nil {
+		if cached, err := models.RDB.Get(ctx, cacheKey).Result(); err == nil {
+			var data map[string]any
+			if json.Unmarshal([]byte(cached), &data) == nil {
+				response.Success("ok", data, c)
+				return
+			}
 		}
 	}
 

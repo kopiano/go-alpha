@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -48,6 +49,10 @@ func init() {
 		os.Exit(1)
 	}
 
+	if loc, err := time.LoadLocation("Asia/Shanghai"); err == nil {
+		time.Local = loc
+	}
+
 	// 环境变量覆盖（用于 Docker 容器）
 	if v := os.Getenv("MYSQL_HOST"); v != "" {
 		Conf.MySQL.Host = v
@@ -58,7 +63,8 @@ func init() {
 }
 
 func GetYamlDsn() string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	_ = time.Local
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Asia%%2FShanghai",
 		Conf.MySQL.User,
 		Conf.MySQL.Password,
 		Conf.MySQL.Host,

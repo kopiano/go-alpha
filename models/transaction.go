@@ -10,7 +10,7 @@ import (
 
 // Transaction 交易记录表
 type Transaction struct {
-	ID            uint           `gorm:"primaryKey" json:"id"`
+	ID            uint           `gorm:"primaryKey;autoIncrement" json:"id"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
@@ -18,7 +18,7 @@ type Transaction struct {
 	Time          string         `gorm:"type:varchar(50);index" json:"time"`            // 交易时间
 	Type          string         `gorm:"type:varchar(20);index" json:"type"`            // income / expense / neutral
 	Merchant      string         `gorm:"type:varchar(255)" json:"merchant"`             // 商家（交易对方）
-	Product       string         `gorm:"type:varchar(255)" json:"product"`             // 商品说明
+	Product       string         `gorm:"type:varchar(255)" json:"product"`              // 商品说明
 	Amount        float64        `gorm:"type:decimal(12,2);not null" json:"amount"`     // 金额
 	PaymentMethod string         `gorm:"type:varchar(100)" json:"payment_method"`       // 支付方式
 	PaymentApp    string         `gorm:"type:varchar(100)" json:"payment_app"`          // 支付软件
@@ -194,7 +194,7 @@ func (Transaction) List(filter TransactionFilter) ([]Transaction, int64, error) 
 	if filter.SortDir == "asc" {
 		sortDir = "ASC"
 	}
-	err := query.Order(sortField+" "+sortDir+", id DESC").Offset(offset).Limit(filter.PageSize).Find(&txns).Error
+	err := query.Order(sortField + " " + sortDir + ", id DESC").Offset(offset).Limit(filter.PageSize).Find(&txns).Error
 	return txns, total, err
 }
 

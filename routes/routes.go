@@ -82,6 +82,14 @@ func SetupRouter() *gin.Engine {
 		v1.GET("/36kr", func(c *gin.Context) {
 			c.JSON(200, gin.H{"message": "因36kr改用字节火山引擎需要真人滑块验证，接口已弃用"})
 		})
+		doc := v1.Group("/docs")
+		{
+			doc.GET("", docController.List)
+			doc.GET("/:id", docController.Detail)
+			doc.POST("", docController.Save)
+			doc.PUT("/:id", middleware.AuthRequired(), docController.Update)
+			doc.DELETE("/:id", middleware.AuthRequired(), docController.Delete)
+		}
 		// Visitor stats (Cookie/Session + uuid + Redis)
 		visitor := v1.Group("/visitor")
 		{
@@ -95,11 +103,6 @@ func SetupRouter() *gin.Engine {
 			visitor.POST("/visit", controller.RecordVisit)
 			// 心跳上报接口。前端定时调用，用来累计浏览时长、更新最后访问时间，必要时同步用户名
 			visitor.POST("/heartbeat", controller.VisitorHeartbeat)
-		}
-		doc := v1.Group("/doc")
-		{
-			doc.GET("/list", docController.List)
-			doc.POST("/save", docController.Save)
 		}
 		comment := v1.Group("/comment")
 		{
@@ -127,7 +130,7 @@ func SetupRouter() *gin.Engine {
 			})
 		}
 		// Transaction
-		transaction := r.Group("/transactions")
+		transaction := v1.Group("/transactions")
 		transaction.Use(middleware.AuthRequired())
 		{
 			transaction.GET("", transactionController.List)
