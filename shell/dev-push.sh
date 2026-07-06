@@ -1,6 +1,6 @@
 git checkout dev
-git add . && git status
-# shellcheck disable=SC2162
+git add .
+git status
 read -t 40 -p "[dev] Enter commit >>> " message
 if [ "$message" != "" ]; then
   git commit -m "[dev comment]: $message"
