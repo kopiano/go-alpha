@@ -27,6 +27,8 @@ func PublishMessage(msg models.Message, senderUsername, senderAvatar string) {
 
 	wsMsg := map[string]interface{}{
 		"type":               "message",
+		"event":              "message.new",
+		"chat_type":          msg.ChatType,
 		"sender_id":          msg.SenderID,
 		"sender_username":    senderUsername,
 		"sender_avatar":      senderAvatar,

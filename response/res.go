@@ -25,7 +25,7 @@ func Success(message string, data any, c *gin.Context) {
 
 // Failed 请求失败
 func Failed(message string, c *gin.Context) {
-	c.JSON(http.StatusOK, Response{
+	c.JSON(http.StatusBadRequest, Response{
 		Code:    400,
 		Message: message,
 		Data:    0,

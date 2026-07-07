@@ -92,6 +92,7 @@ func TestSuccessMessagePayload(t *testing.T) {
 		ReceiverID:     2,
 		MessageType:    models.MsgText,
 		Content:        "hello",
+		FileURL:        "https://example.com/file.png",
 		Status:         1,
 	}
 	sender := models.User{Username: "alice", Avatar: "/a.png"}
@@ -105,6 +106,9 @@ func TestSuccessMessagePayload(t *testing.T) {
 	}
 	if payload["receiver_id"] != uint(2) {
 		t.Fatalf("receiver_id = %v, want 2", payload["receiver_id"])
+	}
+	if payload["file_url"] != "https://example.com/file.png" {
+		t.Fatalf("file_url = %v, want file url", payload["file_url"])
 	}
 }
 

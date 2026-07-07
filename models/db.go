@@ -45,6 +45,18 @@ func SetupMySQL() *gorm.DB {
 	if DB.Migrator().HasColumn(&Md{}, "contributors") {
 		DB.Exec("UPDATE `md` SET `contributors` = JSON_ARRAY(`user_id`) WHERE `contributors` IS NULL OR JSON_LENGTH(`contributors`) = 0")
 	}
+	if DB.Migrator().HasColumn(&Conversation{}, "is_pinned") {
+		DB.Migrator().DropColumn(&Conversation{}, "is_pinned")
+	}
+	if DB.Migrator().HasColumn(&Conversation{}, "is_muted") {
+		DB.Migrator().DropColumn(&Conversation{}, "is_muted")
+	}
+	if DB.Migrator().HasColumn(&ConversationMember{}, "pinned_at") {
+		DB.Migrator().DropColumn(&ConversationMember{}, "pinned_at")
+	}
+	if DB.Migrator().HasColumn(&ConversationMember{}, "muted_until") {
+		DB.Migrator().DropColumn(&ConversationMember{}, "muted_until")
+	}
 
 	migrateChatData(DB)
 

@@ -121,12 +121,15 @@ func SetupRouter() *gin.Engine {
 		// Chat — New conversation system
 		chat := v1.Group("/chat")
 		{
-			chat.GET("/conversations", middleware.AuthRequired(), controller.GetConversations)      // 会话列表
-			chat.GET("/groups", middleware.AuthRequired(), controller.GetGroups)                    // 群聊信息
-			chat.POST("/conversations", middleware.AuthRequired(), controller.CreateConversationV2) // 创建/获取私聊会话
+			// 获取联系人列表
+			chat.GET("/conversations", middleware.AuthRequired(), controller.GetConversations)
+			// 获取历史消息
 			chat.GET("/conversations/:id/messages", middleware.AuthRequired(), controller.GetConversationMessagesV2)
+			// 发送消息
+			chat.POST("/messages", middleware.AuthRequired(), controller.PostMessage)
+			// chat.GET("/groups", middleware.AuthRequired(), controller.GetGroups)                    // 群聊信息
+			// chat.POST("/conversations", middleware.AuthRequired(), controller.CreateConversationV2) // 创建/获取私聊会话
 			chat.PUT("/conversations/:id/read", middleware.AuthRequired(), controller.MarkConversationReadV2)
-			chat.POST("/messages", middleware.AuthRequired(), controller.PostMessage) // 发送消息
 			chat.GET("/ws", func(c *gin.Context) { // WebSocket
 				controller.HandleWebSocket(c.Writer, c.Request)
 			})

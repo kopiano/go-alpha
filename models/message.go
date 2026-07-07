@@ -19,27 +19,20 @@ const (
 	MsgFile  = 4 // 文件附件
 )
 
-// MsgStatus 消息状态
-const (
-	StatusActive   = 1 // 正常
-	StatusRecalled = 2 // 已撤回
-	StatusDeleted  = 3 // 已删除
-)
-
 // Message 聊天消息
 type Message struct {
 	ID             uint   `gorm:"primaryKey;autoIncrement" json:"id"`
 	ConversationID string `gorm:"type:varchar(64);not null;index:idx_chat_message_conv_created,priority:1;index:idx_chat_message_conv_id,priority:1" json:"conversation_id"`
 
 	// sender / receiver
-	ChatType   string `gorm:"type:varchar(20);not null;index" json:"chat_type"` // "private" | "group"
+	ChatType   string `gorm:"type:varchar(20);not null;index" json:"chat_type"` // 消息类型：用户"private"、群聊"group"
 	SenderID   uint   `gorm:"index:idx_chat_message_conv_sender_status,priority:2;index:idx_chat_message_sender_receiver,priority:1;not null" json:"sender_id"`
 	ReceiverID uint   `gorm:"index:idx_chat_message_sender_receiver,priority:2;index:idx_chat_message_receiver_status,priority:1" json:"receiver_id"` // 私聊
-	GroupID    uint   `gorm:"index" json:"group_id"`                                                                                                  // 群聊
-
+	GroupID    uint   `gorm:"index" json:"group_id"`                                                                                                  // 群聊id
 	// message
 	Content     string         `gorm:"type:text;not null" json:"content"` // 内容
 	MessageType int            `gorm:"default:1" json:"message_type"`     // 消息类型：1-4
+	FileURL     string         `gorm:"type:varchar(255)" json:"file_url"`
 	ReplyToID   *uint          `gorm:"index" json:"reply_to_id,omitempty"`
 	EditedAt    *time.Time     `json:"edited_at,omitempty"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
@@ -138,6 +131,7 @@ func MarkConversationRead(db *gorm.DB, convID string, userID uint) {
 		Updates(map[string]any{
 			"last_read_at":         time.Now(),
 			"last_read_message_id": lastID,
+			"unread_count":         0,
 		})
 }
 
@@ -286,6 +280,15 @@ func SaveMessage(db *gorm.DB, msg *Message) error {
 	if err == nil && msg.ConversationID != "" {
 		invalidateMsgCache(msg.ConversationID)
 		ensureConversationForMessage(db, *msg)
+		if msg.ChatType == ConversationTypePrivate {
+			db.Model(&ConversationMember{}).
+				Where("conversation_id = ? AND user_id = ?", msg.ConversationID, msg.ReceiverID).
+				UpdateColumn("unread_count", gorm.Expr("unread_count + 1"))
+		} else if msg.ChatType == ConversationTypeGroup {
+			db.Model(&ConversationMember{}).
+				Where("conversation_id = ? AND user_id <> ?", msg.ConversationID, msg.SenderID).
+				UpdateColumn("unread_count", gorm.Expr("unread_count + 1"))
+		}
 		db.Model(&Conversation{}).Where("id = ?", msg.ConversationID).Updates(map[string]any{
 			"last_message_id":   msg.ID,
 			"last_message_at":   msg.CreatedAt,

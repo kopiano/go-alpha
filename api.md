@@ -385,3 +385,95 @@ GET 成功响应示例：
 │ uv       │ wttr.in API │ 紫外线指数（0-11+），如 "2" │                                                                                                                  
 └──────────┴─────────────┴─────────────────────────────┘
 humidity、uv、wind 这三个字段 只出现在 Python 脚本输出的结果中，weather 表里确实没有对应列。 
+
+## chat 
+/api/v1/chat 这组接口主要负责三件事：会话列表、消息收发、在线状态同步。
+
+接口                                           作用
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GET /api/v1/chat/conversations                 获取当前用户的会话列表。返回私聊/群聊会话、联系人目录 users，以及 Team 群信息 team。支持 Redis 缓存。
+─────────────────────────────────────────────  ───────────────────────────────────────────────────────────────────────────────────────────────────────
+GET /api/v1/chat/groups                        获取群聊信息。当前实现里实际返回的是 Team 群数据，格式为 {"groups":[teamInfo]}。
+─────────────────────────────────────────────  ───────────────────────────────────────────────────────────────────────────────────────────────────────
+POST /api/v1/chat/conversations                创建或获取一个与指定用户的私聊会话。传 user_id，返回 conversation_id。
+─────────────────────────────────────────────  ───────────────────────────────────────────────────────────────────────────────────────────────────────
+GET /api/v1/chat/conversations/:id/messages    拉取某个会话的消息记录。支持 limit、offset，也支持 before_id 做向前翻页。
+─────────────────────────────────────────────  ───────────────────────────────────────────────────────────────────────────────────────────────────────
+PUT /api/v1/chat/conversations/:id/read        将指定会话标记为已读。会更新已读状态，并通过 WebSocket 广播 conversation.read / conversation.update。
+─────────────────────────────────────────────  ───────────────────────────────────────────────────────────────────────────────────────────────────────
+POST /api/v1/chat/messages                     发送消息。支持私聊和群聊，自动补全会话、保存消息、广播到在线客户端。
+─────────────────────────────────────────────  ───────────────────────────────────────────────────────────────────────────────────────────────────────
+GET /api/v1/chat/ws                            WebSocket 入口。用于实时接收消息、在线/离线状态、会话更新、已读通知等事件。
+
+补充两点：
+
+- GET /api/v1/chat/conversations 返回的 users 不是简单通讯录，而是“聊天目录”，会带上最近消息、未读数、在线状态。
+- GET /api/v1/chat/ws 需要带 token（Authorization: Bearer ... 或 query token=）完成鉴权。
+
+### 获取联系人列表(用户和群聊)
+接口：GET /api/v1/chat/conversations
+返回示例
+  - 如果没有会话，conversations 会是空数组
+```json
+{
+  "code": 200,
+  "message": "ok",
+  "data": {
+    "conversations": [],
+    "team": {
+      "id": 1,
+      "members": [
+        {
+          "avatar": "/api/v1/avatar/avatar-1.jpg",
+          "user_id": 1,
+          "username": "shville"
+        },
+        {
+          "avatar": "/api/v1/avatar/avatar-2.jpg",
+          "user_id": 2,
+          "username": "test"
+        },
+        {
+          "avatar": "/api/v1/avatar/avatar-3.png",
+          "user_id": 3,
+          "username": "admin"
+        },
+        {
+          "avatar": "/api/v1/avatar/avatar-4.jpg",
+          "user_id": 4,
+          "username": "kope"
+        },
+        {
+          "avatar": "/api/v1/avatar/avatar-5.jpg",
+          "user_id": 5,
+          "username": "amoe"
+        }
+      ],
+      "name": "Team"
+    },
+    "users": [
+      {
+        "user_id": 2,
+        "username": "test",
+        "avatar": "/api/v1/avatar/avatar-2.jpg"
+      },
+      {
+        "user_id": 3,
+        "username": "admin",
+        "avatar": "/api/v1/avatar/avatar-3.png"
+      },
+      {
+        "user_id": 4,
+        "username": "kope",
+        "avatar": "/api/v1/avatar/avatar-4.jpg"
+      },
+      {
+        "user_id": 5,
+        "username": "amoe",
+        "avatar": "/api/v1/avatar/avatar-5.jpg"
+      }
+    ]
+  },
+  "error": null
+}
+```

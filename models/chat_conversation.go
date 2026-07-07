@@ -25,8 +25,6 @@ type Conversation struct {
 	LastMessageText string    `gorm:"type:varchar(255)" json:"last_message_text"`
 	LastMessageType int       `gorm:"default:1" json:"last_message_type"`
 	LastSenderID    uint      `gorm:"index" json:"last_sender_id"`
-	IsPinned        bool      `gorm:"default:false;index" json:"is_pinned"`
-	IsMuted         bool      `gorm:"default:false" json:"is_muted"`
 	CreatedBy       uint      `gorm:"index;not null" json:"created_by"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `gorm:"index:idx_chat_conversation_type_lastmsg,priority:3;index:idx_chat_conversation_created_type,priority:1" json:"updated_at"`
@@ -39,9 +37,8 @@ type ConversationMember struct {
 	ConversationID    string         `gorm:"type:varchar(64);not null;index:idx_chat_conv_member,priority:1;uniqueIndex:uk_chat_conv_user,priority:1" json:"conversation_id"`
 	UserID            uint           `gorm:"not null;index:idx_chat_conv_member,priority:2;uniqueIndex:uk_chat_conv_user,priority:2;index:idx_chat_conv_user_left,priority:1" json:"user_id"`
 	LastReadMessageID uint           `gorm:"default:0;index:idx_chat_conv_user_left,priority:3" json:"last_read_message_id"`
+	UnreadCount       int64          `gorm:"default:0;index" json:"unread_count"`
 	LastReadAt        time.Time      `gorm:"index" json:"last_read_at"`
-	PinnedAt          *time.Time     `gorm:"index" json:"pinned_at"`
-	MutedUntil        *time.Time     `json:"muted_until"`
 	JoinedAt          time.Time      `json:"joined_at"`
 	LeftAt            gorm.DeletedAt `gorm:"index:idx_chat_conv_member,priority:3;index:idx_chat_conv_user_left,priority:2" json:"left_at"`
 	CreatedAt         time.Time      `json:"created_at"`
@@ -60,8 +57,6 @@ type ConversationListItem struct {
 	LastMessageAt   time.Time                `json:"last_message_at"`
 	LastSenderID    uint                     `json:"last_sender_id"`
 	UnreadCount     int64                    `json:"unread_count"`
-	IsPinned        bool                     `json:"is_pinned"`
-	IsMuted         bool                     `json:"is_muted"`
 	Members         []ConversationMemberUser `json:"members,omitempty"`
 }
 
@@ -108,23 +103,6 @@ func GetUserConversationsV2(db *gorm.DB, userID uint) ([]ConversationListItem, e
 	convMap := make(map[string]Conversation, len(conversations))
 	for _, c := range conversations {
 		convMap[c.ID] = c
-	}
-
-	unreadMap := make(map[string]int64, len(convIDs))
-	type unreadRow struct {
-		ConversationID string
-		UnreadCount    int64
-	}
-	var unreadRows []unreadRow
-	if err := db.Model(&Message{}).
-		Select("messages.conversation_id, COUNT(*) AS unread_count").
-		Joins("JOIN chat_conversation_member cm ON cm.conversation_id = messages.conversation_id AND cm.user_id = ?", userID).
-		Where("messages.conversation_id IN ? AND messages.sender_id <> ? AND messages.id > cm.last_read_message_id", convIDs, userID).
-		Group("messages.conversation_id").
-		Scan(&unreadRows).Error; err == nil {
-		for _, row := range unreadRows {
-			unreadMap[row.ConversationID] = row.UnreadCount
-		}
 	}
 
 	privatePeerIDs := make(map[uint]struct{})
@@ -199,8 +177,6 @@ func GetUserConversationsV2(db *gorm.DB, userID uint) ([]ConversationListItem, e
 			LastMessageType: conv.LastMessageType,
 			LastMessageAt:   conv.LastMessageAt,
 			LastSenderID:    conv.LastSenderID,
-			IsPinned:        conv.IsPinned || mem.PinnedAt != nil,
-			IsMuted:         conv.IsMuted || mem.MutedUntil != nil,
 			UnreadCount:     0,
 		}
 		if conv.Type == ConversationTypePrivate {
@@ -220,10 +196,7 @@ func GetUserConversationsV2(db *gorm.DB, userID uint) ([]ConversationListItem, e
 			item.Members = groupMembersByConv[conv.ID]
 		}
 		if mem, ok := memberMap[conv.ID]; ok {
-			item.UnreadCount = unreadMap[conv.ID]
-			if item.UnreadCount == 0 && mem.LastReadMessageID == 0 {
-				item.UnreadCount = unreadMap[conv.ID]
-			}
+			item.UnreadCount = mem.UnreadCount
 		}
 		result = append(result, item)
 	}

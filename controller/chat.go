@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -75,6 +76,9 @@ func successMessagePayload(msg models.Message, sender models.User) gin.H {
 	}
 	if msg.GroupID > 0 {
 		payload["group_id"] = msg.GroupID
+	}
+	if msg.FileURL != "" {
+		payload["file_url"] = msg.FileURL
 	}
 	return payload
 }
@@ -369,6 +373,209 @@ func getChatTeamInfo() gin.H {
 	return teamInfo
 }
 
+// ─── Message send paths ─────────────────────────────────────────
+
+func sendPrivateChatMessage(c *gin.Context, senderID uint, body *postMessageBody) {
+	convID := body.ConversationID
+	if convID == "" && body.RecipientID > 0 {
+		if body.RecipientID == senderID {
+			response.Failed("Cannot send message to yourself", c)
+			return
+		}
+		var err error
+		convID, err = models.EnsurePrivateConversation(models.DB, senderID, body.RecipientID)
+		if err != nil {
+			response.Failed("failed to create conversation", c)
+			return
+		}
+	}
+	if convID == "" {
+		response.Failed("conversation_id or recipient_id is required", c)
+		return
+	}
+
+	userA := models.PrivateConvUserA(convID)
+	userB := models.PrivateConvUserB(convID)
+	if senderID != userA && senderID != userB {
+		response.Failed("You are not a member of this conversation", c)
+		return
+	}
+
+	recipientID := models.PrivateConvRecipient(senderID, convID)
+	if recipientID == 0 {
+		response.Failed("invalid conversation", c)
+		return
+	}
+
+	msg := models.Message{
+		ConversationID: convID,
+		ChatType:       "private",
+		SenderID:       senderID,
+		ReceiverID:     recipientID,
+		MessageType:    body.MessageType,
+		Content:        body.Content,
+		FileURL:        body.FileURL,
+	}
+	if err := models.SaveMessage(models.DB, &msg); err != nil {
+		response.Failed("Failed to save message", c)
+		return
+	}
+
+	sender := loadSenderProfile(senderID)
+	BroadcastMessageWithSender(msg, sender.Username, sender.Avatar)
+	BroadcastConversationUpdate(convID, map[string]any{
+		"last_message":      msg.Content,
+		"last_message_type": msg.MessageType,
+		"last_sender_id":    msg.SenderID,
+	})
+	invalidateChatConvCache(convID)
+	models.TouchConversationList(senderID, recipientID)
+	invalidateChatUserInfoCache(recipientID)
+	response.Success("Message sent", successMessagePayload(msg, sender), c)
+}
+
+func sendGroupChatMessage(c *gin.Context, senderID uint, body *postMessageBody) {
+	memberIDs := models.GetGroupMembers(models.DB, body.GroupID)
+	isMember := false
+	for _, mid := range memberIDs {
+		if mid == senderID {
+			isMember = true
+			break
+		}
+	}
+	if !isMember {
+		response.Failed("You are not a member of this group", c)
+		return
+	}
+
+	convID := models.EnsureGroupConversation(models.DB, body.GroupID, memberIDs)
+	msg := models.Message{
+		ConversationID: convID,
+		ChatType:       "group",
+		SenderID:       senderID,
+		GroupID:        body.GroupID,
+		MessageType:    body.MessageType,
+		Content:        body.Content,
+		FileURL:        body.FileURL,
+	}
+	if err := models.SaveMessage(models.DB, &msg); err != nil {
+		response.Failed("Failed to save message", c)
+		return
+	}
+
+	sender := loadSenderProfile(senderID)
+	BroadcastMessageWithSender(msg, sender.Username, sender.Avatar)
+	BroadcastConversationUpdate(convID, map[string]any{
+		"last_message":      msg.Content,
+		"last_message_type": msg.MessageType,
+		"last_sender_id":    msg.SenderID,
+	})
+	models.TouchConversationList(models.GetConversationMemberIDs(models.DB, convID)...)
+	response.Success("Message sent", successMessagePayload(msg, sender), c)
+}
+
+// ─── API response types ─────────────────────────────────────────
+
+type ConversationUser struct {
+	UserID   uint   `json:"user_id"`
+	Username string `json:"username"`
+	Avatar   string `json:"avatar"`
+}
+
+type ConversationResponse struct {
+	ConversationID  string             `json:"conversation_id"`
+	Type            string             `json:"type"`
+	Title           string             `json:"title"`
+	Avatar          string             `json:"avatar"`
+	LastMessage     string             `json:"last_message"`
+	LastMessageType int                `json:"last_message_type"`
+	LastMessageAt   time.Time          `json:"last_message_at"`
+	UnreadCount     int64              `json:"unread_count"`
+	Users           []ConversationUser `json:"users,omitempty"`
+}
+
+// ContactInfo 联系人信息（/user_info 接口返回结构）
+type ContactInfo struct {
+	UserID         uint   `json:"user_id"`
+	Username       string `json:"username"`
+	Avatar         string `json:"avatar"`
+	Online         bool   `json:"online"`
+	ConversationID string `json:"conversation_id"`
+	LastMsg        string `json:"last_msg"`
+	LastMsgType    int    `json:"last_msg_type"`
+	LastTime       string `json:"last_time"`
+	Unread         int64  `json:"unread"`
+}
+
+// ─── Conversation APIs ──────────────────────────────────────────
+
+// ─── GET /api/v1/chat/:id/messages ───
+// ─── GET /api/v1/chat/:id/messages ───
+func GetMessages(c *gin.Context) {
+	GetConversationMessagesV2(c)
+}
+
+func GetConversations(c *gin.Context) {
+	userID := c.GetUint("userId")
+	if userID == 0 {
+		response.Failed("unauthorized", c)
+		return
+	}
+	if cached, ok := models.GetCachedConversationList(userID); ok {
+		out := make([]ConversationResponse, 0, len(cached))
+		for _, item := range cached {
+			res := ConversationResponse{
+				ConversationID:  item.ConversationID,
+				Type:            item.Type,
+				Title:           item.Title,
+				Avatar:          item.Avatar,
+				LastMessage:     item.LastMessage,
+				LastMessageType: item.LastMessageType,
+				LastMessageAt:   item.LastMessageAt,
+				UnreadCount:     item.UnreadCount,
+			}
+			for _, u := range item.Members {
+				res.Users = append(res.Users, ConversationUser{UserID: u.UserID, Username: u.Username, Avatar: u.Avatar})
+			}
+			out = append(out, res)
+		}
+		response.Success("ok", gin.H{
+			"conversations": out,
+			"users":         getChatDirectoryUsers(userID, cached),
+			"team":          getChatTeamInfo(),
+		}, c)
+		return
+	}
+	items, err := models.GetUserConversationsV2(models.DB, userID)
+	if err != nil {
+		response.Failed("failed to fetch conversations", c)
+		return
+	}
+	out := make([]ConversationResponse, 0, len(items))
+	for _, item := range items {
+		res := ConversationResponse{
+			ConversationID:  item.ConversationID,
+			Type:            item.Type,
+			Title:           item.Title,
+			Avatar:          item.Avatar,
+			LastMessage:     item.LastMessage,
+			LastMessageType: item.LastMessageType,
+			LastMessageAt:   item.LastMessageAt,
+			UnreadCount:     item.UnreadCount,
+		}
+		for _, u := range item.Members {
+			res.Users = append(res.Users, ConversationUser{UserID: u.UserID, Username: u.Username, Avatar: u.Avatar})
+		}
+		out = append(out, res)
+	}
+	models.CacheConversationList(userID, items)
+	response.Success("ok", gin.H{
+		"conversations": out,
+		"users":         getChatDirectoryUsers(userID, items),
+		"team":          getChatTeamInfo(),
+	}, c)
+}
+
 type chatDirectoryUser struct {
 	UserID         uint   `json:"user_id"`
 	Username       string `json:"username"`
@@ -424,208 +631,6 @@ func getChatDirectoryUsers(userID uint, items []models.ConversationListItem) []c
 		result = append(result, item)
 	}
 	return result
-}
-
-// ─── Message send paths ─────────────────────────────────────────
-
-func sendPrivateChatMessage(c *gin.Context, senderID uint, body *postMessageBody) {
-	convID := body.ConversationID
-	if convID == "" && body.RecipientID > 0 {
-		if body.RecipientID == senderID {
-			response.Failed("Cannot send message to yourself", c)
-			return
-		}
-		var err error
-		convID, err = models.EnsurePrivateConversation(models.DB, senderID, body.RecipientID)
-		if err != nil {
-			response.Failed("failed to create conversation", c)
-			return
-		}
-	}
-	if convID == "" {
-		response.Failed("conversation_id or recipient_id is required", c)
-		return
-	}
-
-	userA := models.PrivateConvUserA(convID)
-	userB := models.PrivateConvUserB(convID)
-	if senderID != userA && senderID != userB {
-		response.Failed("You are not a member of this conversation", c)
-		return
-	}
-
-	recipientID := models.PrivateConvRecipient(senderID, convID)
-	if recipientID == 0 {
-		response.Failed("invalid conversation", c)
-		return
-	}
-
-	msg := models.Message{
-		ConversationID: convID,
-		ChatType:       "private",
-		SenderID:       senderID,
-		ReceiverID:     recipientID,
-		MessageType:    body.MessageType,
-		Content:        body.Content,
-	}
-	if err := models.SaveMessage(models.DB, &msg); err != nil {
-		response.Failed("Failed to save message", c)
-		return
-	}
-
-	sender := loadSenderProfile(senderID)
-	BroadcastMessageWithSender(msg, sender.Username, sender.Avatar)
-	invalidateChatConvCache(convID)
-	models.TouchConversationList(senderID, recipientID)
-	invalidateChatUserInfoCache(recipientID)
-	response.Success("Message sent", successMessagePayload(msg, sender), c)
-}
-
-func sendGroupChatMessage(c *gin.Context, senderID uint, body *postMessageBody) {
-	memberIDs := models.GetGroupMembers(models.DB, body.GroupID)
-	isMember := false
-	for _, mid := range memberIDs {
-		if mid == senderID {
-			isMember = true
-			break
-		}
-	}
-	if !isMember {
-		response.Failed("You are not a member of this group", c)
-		return
-	}
-
-	convID := models.EnsureGroupConversation(models.DB, body.GroupID, memberIDs)
-	msg := models.Message{
-		ConversationID: convID,
-		ChatType:       "group",
-		SenderID:       senderID,
-		GroupID:        body.GroupID,
-		MessageType:    body.MessageType,
-		Content:        body.Content,
-	}
-	if err := models.SaveMessage(models.DB, &msg); err != nil {
-		response.Failed("Failed to save message", c)
-		return
-	}
-
-	sender := loadSenderProfile(senderID)
-	BroadcastMessageWithSender(msg, sender.Username, sender.Avatar)
-	BroadcastConversationUpdate(convID, map[string]any{
-		"last_message":      msg.Content,
-		"last_message_type": msg.MessageType,
-		"last_sender_id":    msg.SenderID,
-	})
-	models.TouchConversationList(models.GetConversationMemberIDs(models.DB, convID)...)
-	response.Success("Message sent", successMessagePayload(msg, sender), c)
-}
-
-// ─── API response types ─────────────────────────────────────────
-
-type ConversationUser struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	Avatar   string `json:"avatar"`
-}
-
-type ConversationResponse struct {
-	ConversationID  string             `json:"conversation_id"`
-	Type            string             `json:"type"`
-	Title           string             `json:"title"`
-	Avatar          string             `json:"avatar"`
-	LastMessage     string             `json:"last_message"`
-	LastMessageType int                `json:"last_message_type"`
-	LastMessageAt   time.Time          `json:"last_message_at"`
-	UnreadCount     int64              `json:"unread_count"`
-	IsPinned        bool               `json:"is_pinned"`
-	IsMuted         bool               `json:"is_muted"`
-	Users           []ConversationUser `json:"users,omitempty"`
-}
-
-// ContactInfo 联系人信息（/user_info 接口返回结构）
-type ContactInfo struct {
-	UserID         uint   `json:"user_id"`
-	Username       string `json:"username"`
-	Avatar         string `json:"avatar"`
-	Online         bool   `json:"online"`
-	ConversationID string `json:"conversation_id"`
-	LastMsg        string `json:"last_msg"`
-	LastMsgType    int    `json:"last_msg_type"`
-	LastTime       string `json:"last_time"`
-	Unread         int64  `json:"unread"`
-}
-
-// ─── Conversation APIs ──────────────────────────────────────────
-
-// ─── GET /api/v1/chat/:id/messages ───
-// ─── GET /api/v1/chat/:id/messages ───
-func GetMessages(c *gin.Context) {
-	GetConversationMessagesV2(c)
-}
-
-func GetConversations(c *gin.Context) {
-	userID := c.GetUint("userId")
-	if userID == 0 {
-		response.Failed("unauthorized", c)
-		return
-	}
-	if cached, ok := models.GetCachedConversationList(userID); ok {
-		out := make([]ConversationResponse, 0, len(cached))
-		for _, item := range cached {
-			res := ConversationResponse{
-				ConversationID:  item.ConversationID,
-				Type:            item.Type,
-				Title:           item.Title,
-				Avatar:          item.Avatar,
-				LastMessage:     item.LastMessage,
-				LastMessageType: item.LastMessageType,
-				LastMessageAt:   item.LastMessageAt,
-				UnreadCount:     item.UnreadCount,
-				IsPinned:        item.IsPinned,
-				IsMuted:         item.IsMuted,
-			}
-			for _, u := range item.Members {
-				res.Users = append(res.Users, ConversationUser{UserID: u.UserID, Username: u.Username, Avatar: u.Avatar})
-			}
-			out = append(out, res)
-		}
-		response.Success("ok", gin.H{
-			"conversations": out,
-			"users":         getChatDirectoryUsers(userID, cached),
-			"team":          getChatTeamInfo(),
-		}, c)
-		return
-	}
-	items, err := models.GetUserConversationsV2(models.DB, userID)
-	if err != nil {
-		response.Failed("failed to fetch conversations", c)
-		return
-	}
-	out := make([]ConversationResponse, 0, len(items))
-	for _, item := range items {
-		res := ConversationResponse{
-			ConversationID:  item.ConversationID,
-			Type:            item.Type,
-			Title:           item.Title,
-			Avatar:          item.Avatar,
-			LastMessage:     item.LastMessage,
-			LastMessageType: item.LastMessageType,
-			LastMessageAt:   item.LastMessageAt,
-			UnreadCount:     item.UnreadCount,
-			IsPinned:        item.IsPinned,
-			IsMuted:         item.IsMuted,
-		}
-		for _, u := range item.Members {
-			res.Users = append(res.Users, ConversationUser{UserID: u.UserID, Username: u.Username, Avatar: u.Avatar})
-		}
-		out = append(out, res)
-	}
-	models.CacheConversationList(userID, items)
-	response.Success("ok", gin.H{
-		"conversations": out,
-		"users":         getChatDirectoryUsers(userID, items),
-		"team":          getChatTeamInfo(),
-	}, c)
 }
 
 func GetConversationMessagesV2(c *gin.Context) {
@@ -730,18 +735,44 @@ func PostMessage(c *gin.Context) {
 
 	senderID := c.GetUint("userId")
 	if senderID == 0 {
-		senderID = 1
+		response.Failed("unauthorized", c)
+		return
 	}
 	normalizeMessageBody(&body)
 
-	if body.ChatType == "private" {
+	if body.ChatType == "" {
+		switch {
+		case body.GroupID > 0 || strings.HasPrefix(body.ConversationID, "g_"):
+			body.ChatType = "group"
+		case body.ReceiverID > 0 || body.RecipientID > 0 || strings.HasPrefix(body.ConversationID, "p_"):
+			body.ChatType = "private"
+		}
+	}
+
+	switch body.ChatType {
+	case "private":
 		receiverID := body.ReceiverID
 		if receiverID == 0 {
 			receiverID = body.RecipientID
 		}
+		if body.ConversationID != "" {
+			if expected := models.PrivateConvRecipient(senderID, body.ConversationID); expected > 0 {
+				receiverID = expected
+			}
+		}
+		if receiverID == 0 && body.ConversationID != "" {
+			receiverID = models.PrivateConvRecipient(senderID, body.ConversationID)
+		}
 		if receiverID == 0 || receiverID == senderID {
 			response.Failed("Invalid receiver", c)
 			return
+		}
+		if body.ConversationID != "" && body.RecipientID > 0 {
+			expected := models.PrivateConvRecipient(senderID, body.ConversationID)
+			if expected != 0 && expected != body.RecipientID {
+				response.Failed("recipient_id does not match conversation_id", c)
+				return
+			}
 		}
 		var err error
 		body.ReceiverID = receiverID
@@ -752,14 +783,28 @@ func PostMessage(c *gin.Context) {
 		}
 		sendPrivateChatMessage(c, senderID, &body)
 		return
-	}
-
-	if body.ChatType == "group" && body.GroupID > 0 {
-		sendGroupChatMessage(c, senderID, &body)
+	case "group":
+		if body.GroupID == 0 && strings.HasPrefix(body.ConversationID, "g_") {
+			if gid, err := strconv.ParseUint(strings.TrimPrefix(body.ConversationID, "g_"), 10, 64); err == nil {
+				body.GroupID = uint(gid)
+			}
+		}
+		if body.ConversationID != "" && body.GroupID > 0 {
+			expected := strings.TrimPrefix(body.ConversationID, "g_")
+			if expected != strconv.FormatUint(uint64(body.GroupID), 10) && strings.HasPrefix(body.ConversationID, "g_") {
+				response.Failed("group_id does not match conversation_id", c)
+				return
+			}
+		}
+		if body.GroupID > 0 {
+			sendGroupChatMessage(c, senderID, &body)
+			return
+		}
+		response.Failed("group_id is required for chat_type=group", c)
 		return
 	}
 
-	response.Failed("invalid chat_type", c)
+	response.Failed("invalid chat_type, expected private or group", c)
 }
 
 // ─── User info / presence ──────────────────────────────────────
