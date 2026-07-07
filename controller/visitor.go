@@ -350,19 +350,19 @@ func RecordVisit(c *gin.Context) {
 	}
 
 	visitor := models.Visitor{
-		VisitorID: visitorID,
-			DeviceFingerprint: strings.TrimSpace(form.DeviceFingerprint),
+		VisitorID:         visitorID,
+		DeviceFingerprint: strings.TrimSpace(form.DeviceFingerprint),
 
-		IP:        fmt.Sprint(locationData["ip"]),
-		Country:   country,
-		City:      city,
-		Location:  location,
-		OS:        osName,
-		Browser:   browser,
-		Device:    device,
-		Status:    status,
-		UserName:  userName,
-		Avatar:    avatar,
+		IP:       fmt.Sprint(locationData["ip"]),
+		Country:  country,
+		City:     city,
+		Location: location,
+		OS:       osName,
+		Browser:  browser,
+		Device:   device,
+		Status:   status,
+		UserName: userName,
+		Avatar:   avatar,
 	}
 	savedVisitor, err := visitor.UpsertVisit(form.Duration)
 	if err != nil {
@@ -378,7 +378,6 @@ func RecordVisit(c *gin.Context) {
 		Count(&todayUV)
 	todayPV, _ := models.RDB.Get(ctx, fmt.Sprintf("visit:pv:%s", today)).Int64()
 	models.VisitorSummary{}.Upsert(today, todayUV, todayPV)
-
 
 	data := gin.H{
 		"visitor_id":     visitorID,
@@ -503,7 +502,7 @@ func GetVisitor(c *gin.Context) {
 		totalPV, _ = models.RDB.Get(ctx, "visit:cache:total_pv").Int64()
 	} else {
 		models.DB.Model(&models.VisitorSummary{}).Select("COALESCE(SUM(pv), 0)").Scan(&totalPV)
-		models.DB.Model(&models.Visitor{}).Select("COUNT(*)").Scan(&totalUV)
+		models.DB.Model(&models.Visitor{}).Select("COUNT(DISTINCT visitor_id)").Scan(&totalUV)
 		models.RDB.Set(ctx, "visit:cache:total_uv", totalUV, 10*time.Minute)
 		models.RDB.Set(ctx, "visit:cache:total_pv", totalPV, 10*time.Minute)
 	}
