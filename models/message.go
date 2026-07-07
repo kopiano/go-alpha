@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -28,57 +29,99 @@ const (
 // Message 聊天消息
 type Message struct {
 	ID             uint   `gorm:"primaryKey;autoIncrement" json:"id"`
-	ConversationID string `gorm:"type:varchar(64);not null;index" json:"conversation_id"`
+	ConversationID string `gorm:"type:varchar(64);not null;index:idx_chat_message_conv_created,priority:1;index:idx_chat_message_conv_id,priority:1" json:"conversation_id"`
 
 	// sender / receiver
 	ChatType   string `gorm:"type:varchar(20);not null;index" json:"chat_type"` // "private" | "group"
-	SenderID   uint   `gorm:"index;not null" json:"sender_id"`
-	ReceiverID uint   `gorm:"index" json:"receiver_id"` // 私聊
-	GroupID    uint   `gorm:"index" json:"group_id"`    // 群聊
+	SenderID   uint   `gorm:"index:idx_chat_message_conv_sender_status,priority:2;index:idx_chat_message_sender_receiver,priority:1;not null" json:"sender_id"`
+	ReceiverID uint   `gorm:"index:idx_chat_message_sender_receiver,priority:2;index:idx_chat_message_receiver_status,priority:1" json:"receiver_id"` // 私聊
+	GroupID    uint   `gorm:"index" json:"group_id"`                                                                                                  // 群聊
 
 	// message
-	Content     string `gorm:"type:text;not null" json:"content"` // 内容
-	MessageType int    `gorm:"default:1" json:"message_type"`     // 消息类型：1-4
+	Content     string         `gorm:"type:text;not null" json:"content"` // 内容
+	MessageType int            `gorm:"default:1" json:"message_type"`     // 消息类型：1-4
+	ReplyToID   *uint          `gorm:"index" json:"reply_to_id,omitempty"`
+	EditedAt    *time.Time     `json:"edited_at,omitempty"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 
 	// status
-	Status int `gorm:"default:0" json:"status"` // 消息状态：0未读，1为已读
+	Status int `gorm:"index:idx_chat_message_conv_sender_status,priority:3;index:idx_chat_message_receiver_status,priority:2;default:0" json:"status"` // 消息状态：0未读，1为已读
 
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `gorm:"index:idx_chat_message_conv_created,priority:2;index:idx_chat_message_sender_receiver,priority:3" json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // ─── 私聊会话辅助函数 ──────────────────────────────────────────
 
 // PrivateConvID 计算私聊会话的确定性 conversation_id
-func PrivateConvID(userA, userB uint) uint {
-	if userA < userB {
-		return (userA << 20) | userB
+// 采用字符串形式避免位运算方案在用户 ID 较大时发生碰撞。
+func PrivateConvID(userA, userB uint) string {
+	if userA == userB {
+		return ""
 	}
-	return (userB << 20) | userA
+	if userA > userB {
+		userA, userB = userB, userA
+	}
+	return fmt.Sprintf("p_%d_%d", userA, userB)
+}
+
+func parsePrivateConvUsers(convID string) (uint, uint, bool) {
+	if strings.HasPrefix(convID, "p_") {
+		parts := strings.Split(convID[2:], "_")
+		if len(parts) != 2 {
+			return 0, 0, false
+		}
+		a, err1 := strconv.ParseUint(parts[0], 10, 64)
+		b, err2 := strconv.ParseUint(parts[1], 10, 64)
+		if err1 != nil || err2 != nil {
+			return 0, 0, false
+		}
+		return uint(a), uint(b), true
+	}
+	id, err := strconv.ParseUint(convID, 10, 64)
+	if err != nil {
+		return 0, 0, false
+	}
+	cid := uint(id)
+	lo := cid & ((1 << 20) - 1)
+	hi := cid >> 20
+	if lo == 0 || hi == 0 {
+		return 0, 0, false
+	}
+	return hi, lo, true
 }
 
 // PrivateConvRecipient 返回私聊中对方用户的 ID
 func PrivateConvRecipient(senderID uint, convID string) uint {
-	id, _ := strconv.ParseUint(convID, 10, 64)
-	cid := uint(id)
-	lo := cid & ((1 << 20) - 1)
-	hi := cid >> 20
-	if senderID == lo {
-		return hi
+	a, b, ok := parsePrivateConvUsers(convID)
+	if !ok {
+		return 0
 	}
-	return lo
+	if senderID == a {
+		return b
+	}
+	if senderID == b {
+		return a
+	}
+	return 0
 }
 
 // PrivateConvUserA 返回私聊中 ID 较小的用户（约定为 UserA）
 func PrivateConvUserA(convID string) uint {
-	id, _ := strconv.ParseUint(convID, 10, 64)
-	return uint(id) >> 20
+	a, _, ok := parsePrivateConvUsers(convID)
+	if !ok {
+		return 0
+	}
+	return a
 }
 
 // PrivateConvUserB 返回私聊中 ID 较大的用户（约定为 UserB）
 func PrivateConvUserB(convID string) uint {
-	id, _ := strconv.ParseUint(convID, 10, 64)
-	return uint(id) & ((1 << 20) - 1)
+	_, b, ok := parsePrivateConvUsers(convID)
+	if !ok {
+		return 0
+	}
+	return b
 }
 
 // ─── 已读状态（使用 Message.Status 字段）────────────────────────
@@ -88,6 +131,14 @@ func MarkConversationRead(db *gorm.DB, convID string, userID uint) {
 	db.Model(&Message{}).
 		Where("conversation_id = ? AND receiver_id = ? AND status = 0", convID, userID).
 		Update("status", 1)
+	var lastID uint
+	db.Model(&Message{}).Where("conversation_id = ?", convID).Select("IFNULL(MAX(id),0)").Scan(&lastID)
+	db.Model(&ConversationMember{}).
+		Where("conversation_id = ? AND user_id = ?", convID, userID).
+		Updates(map[string]any{
+			"last_read_at":         time.Now(),
+			"last_read_message_id": lastID,
+		})
 }
 
 // ─── Sender info populated from User table ─────────────────────
@@ -214,11 +265,38 @@ func GetConversationMessages(db *gorm.DB, convID string, limit, offset int) ([]M
 	return msgs, nil
 }
 
+func GetConversationMessagesBefore(db *gorm.DB, convID string, beforeID uint, limit int) ([]Message, error) {
+	query := db.Where("conversation_id = ?", convID)
+	if beforeID > 0 {
+		query = query.Where("id < ?", beforeID)
+	}
+	var msgs []Message
+	if err := query.Order("id DESC").Limit(limit).Find(&msgs).Error; err != nil {
+		return nil, err
+	}
+	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
+		msgs[i], msgs[j] = msgs[j], msgs[i]
+	}
+	return msgs, nil
+}
+
 // SaveMessage 保存消息
 func SaveMessage(db *gorm.DB, msg *Message) error {
 	err := db.Create(msg).Error
 	if err == nil && msg.ConversationID != "" {
 		invalidateMsgCache(msg.ConversationID)
+		ensureConversationForMessage(db, *msg)
+		db.Model(&Conversation{}).Where("id = ?", msg.ConversationID).Updates(map[string]any{
+			"last_message_id":   msg.ID,
+			"last_message_at":   msg.CreatedAt,
+			"last_message_text": msg.Content,
+			"last_message_type": msg.MessageType,
+			"last_sender_id":    msg.SenderID,
+			"updated_at":        msg.CreatedAt,
+		})
+		if msg.SenderID > 0 {
+			TouchConversationList(msg.SenderID)
+		}
 	}
 	return err
 }

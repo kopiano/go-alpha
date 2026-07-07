@@ -121,13 +121,13 @@ func SetupRouter() *gin.Engine {
 		// Chat — New conversation system
 		chat := v1.Group("/chat")
 		{
-			chat.GET("/user_info", middleware.AuthRequired(), controller.GetChatUserInfo)         // 联系人列表
-			chat.GET("/team", middleware.AuthRequired(), controller.GetTeam)                      // 群聊信息
-			chat.POST("/conversations", middleware.AuthRequired(), controller.CreateConversation) // 获取私聊的会话I，拿到这个id才能加载历史消息和标记已读
-			chat.GET("/:id/messages", middleware.AuthRequired(), controller.GetMessages)          // 加载历史消息
-			chat.POST("/messages", middleware.AuthRequired(), controller.PostMessage)             // 发送消息
-			chat.PUT("/:id/read", middleware.AuthRequired(), controller.MarkConversationRead)     // 标记已读
-			chat.GET("/ws", func(c *gin.Context) {                                                // WebSocket
+			chat.GET("/conversations", middleware.AuthRequired(), controller.GetConversations)      // 会话列表
+			chat.GET("/groups", middleware.AuthRequired(), controller.GetGroups)                    // 群聊信息
+			chat.POST("/conversations", middleware.AuthRequired(), controller.CreateConversationV2) // 创建/获取私聊会话
+			chat.GET("/conversations/:id/messages", middleware.AuthRequired(), controller.GetConversationMessagesV2)
+			chat.PUT("/conversations/:id/read", middleware.AuthRequired(), controller.MarkConversationReadV2)
+			chat.POST("/messages", middleware.AuthRequired(), controller.PostMessage) // 发送消息
+			chat.GET("/ws", func(c *gin.Context) { // WebSocket
 				controller.HandleWebSocket(c.Writer, c.Request)
 			})
 		}

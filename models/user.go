@@ -17,7 +17,7 @@ type User struct {
 	Website     string         `gorm:"type:varchar(100)" json:"website"`
 	Status      string         `gorm:"type:varchar(100);default:inactive" json:"status"`
 	Avatar      string         `gorm:"type:varchar(255);default:null" json:"avatar"`
-	LastLoginAt *time.Time     `gorm:"type:datetime;default:null" json:"last_login_at"`
+	LastLoginAt *time.Time     `gorm:"type:datetime;default:null;index" json:"last_login_at"`
 }
 
 func (User) GetAllUsers() *[]User {

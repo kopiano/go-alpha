@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/viper"
@@ -37,7 +38,7 @@ var Conf Config
 
 func init() {
 	viper.SetConfigType("yaml")
-	viper.SetConfigFile("config.yaml")
+	viper.SetConfigFile(findConfigFile())
 
 	if err := viper.ReadInConfig(); err != nil {
 		slog.Error("Failed to read config file", "error", err)
@@ -60,6 +61,39 @@ func init() {
 	if v := os.Getenv("REDIS_HOST"); v != "" {
 		Conf.Redis.Host = v
 	}
+}
+
+func findConfigFile() string {
+	candidates := []string{}
+	if wd, err := os.Getwd(); err == nil {
+		dir := wd
+		for {
+			candidates = append(candidates, filepath.Join(dir, "config.yaml"))
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
+	}
+	if exe, err := os.Executable(); err == nil {
+		dir := filepath.Dir(exe)
+		for {
+			candidates = append(candidates, filepath.Join(dir, "config.yaml"))
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
+	}
+	candidates = append(candidates, "config.yaml")
+	for _, path := range candidates {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	return "config.yaml"
 }
 
 func GetYamlDsn() string {

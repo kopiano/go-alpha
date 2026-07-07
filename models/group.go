@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -17,13 +18,20 @@ type Group struct {
 func (Group) TableName() string { return "chat_group" }
 
 type GroupMember struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	GroupID   uint      `gorm:"index;not null" json:"group_id"`
-	UserID    uint      `gorm:"index;not null" json:"user_id"`
-	JoinedAt  time.Time `json:"joined_at"`
+	ID       uint      `gorm:"primaryKey" json:"id"`
+	GroupID  uint      `gorm:"index;not null" json:"group_id"`
+	UserID   uint      `gorm:"index;not null" json:"user_id"`
+	JoinedAt time.Time `json:"joined_at"`
 }
 
 func (GroupMember) TableName() string { return "chat_group_member" }
+
+func invalidateTeamCache() {
+	if RDB == nil {
+		return
+	}
+	_ = RDB.Del(context.Background(), "chat:team_info").Err()
+}
 
 // EnsureTeamGroup 确保 Team 群组存在，并将所有用户加为成员
 func EnsureTeamGroup(db *gorm.DB) {
@@ -33,6 +41,7 @@ func EnsureTeamGroup(db *gorm.DB) {
 		group = Group{Name: "Team"}
 		db.Create(&group)
 		slog.Info("Team group created", "id", group.ID)
+		invalidateTeamCache()
 	}
 
 	var users []User
@@ -48,6 +57,7 @@ func EnsureTeamGroup(db *gorm.DB) {
 	}
 	if added > 0 {
 		slog.Info("New members joined Team", "count", added, "total", len(users))
+		invalidateTeamCache()
 	}
 }
 
@@ -61,6 +71,7 @@ func AddUserToTeam(db *gorm.DB, userID uint) {
 	db.Model(&GroupMember{}).Where("group_id = ? AND user_id = ?", group.ID, userID).Count(&count)
 	if count == 0 {
 		db.Create(&GroupMember{GroupID: group.ID, UserID: userID, JoinedAt: time.Now()})
+		invalidateTeamCache()
 	}
 }
 

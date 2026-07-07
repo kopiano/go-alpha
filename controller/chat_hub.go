@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 
 	"go-alpha/models"
+	"go-alpha/response"
 )
 
 // ─── WebSocket 升级器 ───────────────────────────────────────────
@@ -27,15 +28,18 @@ var upgrader = websocket.Upgrader{
 
 // WSMessage WebSocket 通信的消息格式
 type WSMessage struct {
-	Type     string `json:"type"`               // "message" | "typing" | "online" | "ping"
-	UserID   uint   `json:"user_id,omitempty"`
-	Username string `json:"username,omitempty"`
-	Avatar   string `json:"avatar,omitempty"`
-	MsgType  string `json:"msg_type,omitempty"`  // text | emoji | image | file
-	Content  string `json:"content,omitempty"`
-	FileName string `json:"file_name,omitempty"`
-	FileURL  string `json:"file_url,omitempty"`
-	Time     string `json:"time,omitempty"`
+	Type           string `json:"type"`            // legacy category
+	Event          string `json:"event,omitempty"` // message.new | message.edit | message.delete | conversation.read | user.online | user.offline | typing.start | typing.stop
+	UserID         uint   `json:"user_id,omitempty"`
+	Username       string `json:"username,omitempty"`
+	Avatar         string `json:"avatar,omitempty"`
+	MsgType        string `json:"msg_type,omitempty"` // text | emoji | image | file
+	ConversationID string `json:"conversation_id,omitempty"`
+	Content        string `json:"content,omitempty"`
+	FileName       string `json:"file_name,omitempty"`
+	FileURL        string `json:"file_url,omitempty"`
+	Time           string `json:"time,omitempty"`
+	Payload        any    `json:"payload,omitempty"`
 }
 
 // ─── 客户端连接 ──────────────────────────────────────────────────
@@ -154,7 +158,7 @@ func (h *Hub) Run() {
 			slog.Info("WebSocket client connected", "userID", client.userID, "username", client.username, "total", len(h.clients))
 
 			// 广播在线用户列表
-			h.broadcastOnlineUsers()
+			h.broadcastOnlineUsers("user.online", client.userID)
 
 		case client := <-h.unregister:
 			h.mu.Lock()
@@ -166,7 +170,7 @@ func (h *Hub) Run() {
 			slog.Info("WebSocket client disconnected", "userID", client.userID, "total", len(h.clients))
 
 			// 广播在线用户列表
-			h.broadcastOnlineUsers()
+			h.broadcastOnlineUsers("user.offline", client.userID)
 
 		case message := <-h.broadcast:
 			h.mu.RLock()
@@ -185,7 +189,7 @@ func (h *Hub) Run() {
 }
 
 // broadcastOnlineUsers 广播当前在线用户列表
-func (h *Hub) broadcastOnlineUsers() {
+func (h *Hub) broadcastOnlineUsers(event string, uid uint) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -209,8 +213,10 @@ func (h *Hub) broadcastOnlineUsers() {
 	}
 
 	msg := map[string]interface{}{
-		"type":  "online",
-		"users": users,
+		"type":    "presence",
+		"event":   event,
+		"user_id": uid,
+		"users":   users,
 	}
 	data, _ := json.Marshal(msg)
 
@@ -234,6 +240,17 @@ func (h *Hub) IsUserOnline(userID uint) bool {
 	return false
 }
 
+// OnlineUserSet 返回当前在线用户的去重快照。
+func (h *Hub) OnlineUserSet() map[uint]bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	users := make(map[uint]bool, len(h.clients))
+	for client := range h.clients {
+		users[client.userID] = true
+	}
+	return users
+}
+
 // ─── 全局 Hub 单例 ──────────────────────────────────────────────
 
 var ChatHub = NewHub()
@@ -246,36 +263,88 @@ func init() {
 
 // HandleWebSocket 处理 WebSocket 连接升级
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	userID, err := authenticateWebSocketRequest(r)
+	if err != nil {
+		slog.Warn("WebSocket auth failed", "error", err)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		slog.Error("WebSocket upgrade failed", "error", err)
 		return
 	}
 
-	// 从查询参数获取用户信息
-	userID := r.URL.Query().Get("user_id")
-	username := r.URL.Query().Get("username")
-	avatar := r.URL.Query().Get("avatar")
-
-	var uid uint
-	if userID != "" {
-		uidStr, _ := strconv.ParseUint(userID, 10, 64)
-		uid = uint(uidStr)
+	var user models.User
+	if err := models.DB.Select("id, username, avatar").First(&user, userID).Error; err != nil {
+		slog.Warn("WebSocket user lookup failed", "userID", userID, "error", err)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		_ = conn.Close()
+		return
 	}
 
 	client := &Client{
 		hub:      ChatHub,
 		conn:     conn,
 		send:     make(chan []byte, 128),
-		userID:   uid,
-		username: username,
-		avatar:   avatar,
+		userID:   user.ID,
+		username: user.Username,
+		avatar:   user.Avatar,
 	}
 
 	ChatHub.register <- client
+	client.sendPresenceSnapshot()
 
 	go client.writePump()
 	go client.readPump()
+}
+
+func authenticateWebSocketRequest(r *http.Request) (uint, error) {
+	token := ""
+	authHeader := r.Header.Get("Authorization")
+	if authHeader != "" {
+		token = strings.TrimPrefix(authHeader, "Bearer ")
+	}
+	if token == "" {
+		token = r.URL.Query().Get("token")
+	}
+	if token == "" {
+		return 0, http.ErrNoCookie
+	}
+	claims, err := response.ParseToken(token)
+	if err != nil {
+		return 0, err
+	}
+	return claims.Id, nil
+}
+
+func (c *Client) sendPresenceSnapshot() {
+	c.hub.mu.RLock()
+	defer c.hub.mu.RUnlock()
+	type OnlineUser struct {
+		UserID   uint   `json:"user_id"`
+		Username string `json:"username"`
+		Avatar   string `json:"avatar"`
+	}
+	users := make([]OnlineUser, 0, len(c.hub.clients))
+	seen := make(map[uint]bool)
+	for client := range c.hub.clients {
+		if seen[client.userID] {
+			continue
+		}
+		seen[client.userID] = true
+		users = append(users, OnlineUser{UserID: client.userID, Username: client.username, Avatar: client.avatar})
+	}
+	data, _ := json.Marshal(map[string]any{
+		"type":  "presence",
+		"event": "presence.snapshot",
+		"users": users,
+	})
+	select {
+	case c.send <- data:
+	default:
+	}
 }
 
 // BroadcastMessageWithSender 广播消息到所有 WebSocket 客户端（带发送者信息，避免重复查 DB）
@@ -292,20 +361,26 @@ func BroadcastMessageWithSender(msg models.Message, senderUsername, senderAvatar
 	}
 
 	wsMsg := map[string]interface{}{
-		"type":               "message",
-		"chat_type":          msg.ChatType,
-		"id":                 msg.ID,
-		"conversation_id":    msg.ConversationID,
-		"sender_id":          msg.SenderID,
-		"sender_username":    senderUsername,
-		"sender_avatar":      senderAvatar,
-		"username":           senderUsername,
-		"message_type":       msg.MessageType,
-		"msg_type":           msgTypeStr,
-		"content":            msg.Content,
-		"status":             1,
-		"created_at":         msg.CreatedAt.Format(time.RFC3339),
-		"time":               msg.CreatedAt.Format("15:04"),
+		"type":            "message",
+		"event":           "message.new",
+		"chat_type":       msg.ChatType,
+		"id":              msg.ID,
+		"conversation_id": msg.ConversationID,
+		"sender_id":       msg.SenderID,
+		"sender_username": senderUsername,
+		"sender_avatar":   senderAvatar,
+		"username":        senderUsername,
+		"message_type":    msg.MessageType,
+		"msg_type":        msgTypeStr,
+		"content":         msg.Content,
+		"status":          1,
+		"created_at":      msg.CreatedAt.Format(time.RFC3339),
+		"time":            msg.CreatedAt.Format("15:04"),
+		"payload": map[string]any{
+			"conversation_id": msg.ConversationID,
+			"sender_id":       msg.SenderID,
+			"message_id":      msg.ID,
+		},
 	}
 	data, err := json.Marshal(wsMsg)
 	if err != nil {
@@ -320,4 +395,27 @@ func BroadcastMessage(msg models.Message) {
 	var user models.User
 	models.DB.First(&user, msg.SenderID)
 	BroadcastMessageWithSender(msg, user.Username, user.Avatar)
+}
+
+func BroadcastConversationRead(convID string, userID uint) {
+	data, _ := json.Marshal(map[string]any{
+		"type":            "conversation",
+		"event":           "conversation.read",
+		"conversation_id": convID,
+		"user_id":         userID,
+		"time":            time.Now().Format(time.RFC3339),
+	})
+	ChatHub.broadcast <- data
+}
+
+func BroadcastConversationUpdate(convID string, payload map[string]any) {
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	payload["conversation_id"] = convID
+	payload["time"] = time.Now().Format(time.RFC3339)
+	payload["event"] = "conversation.update"
+	payload["type"] = "conversation"
+	data, _ := json.Marshal(payload)
+	ChatHub.broadcast <- data
 }

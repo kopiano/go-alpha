@@ -1,7 +1,6 @@
 package models
 
 import (
-	"strconv"
 	"time"
 
 	"gorm.io/gorm"
@@ -15,18 +14,17 @@ func FindOrCreatePrivateConv(db *gorm.DB, userA, userB uint) (convID string, err
 	if userA == userB {
 		return "", gorm.ErrRecordNotFound
 	}
-	id := PrivateConvID(userA, userB)
-	return strconv.FormatUint(uint64(id), 10), nil
+	return PrivateConvID(userA, userB), nil
 }
 
-// GetUserConversations 获取用户的所有会话（从 messages 表推导）
-type Conversation struct {
+// LegacyConversation 保留旧实现兼容，新的会话模型使用 chat_conversation.go
+type LegacyConversation struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func GetUserConversations(db *gorm.DB, userID uint) ([]Conversation, error) {
+func GetUserConversations(db *gorm.DB, userID uint) ([]LegacyConversation, error) {
 	type convRow struct {
 		ConversationID string
 		ChatType       string
@@ -44,9 +42,9 @@ func GetUserConversations(db *gorm.DB, userID uint) ([]Conversation, error) {
 		return nil, err
 	}
 
-	result := make([]Conversation, 0, len(rows))
+	result := make([]LegacyConversation, 0, len(rows))
 	for _, r := range rows {
-		result = append(result, Conversation{
+		result = append(result, LegacyConversation{
 			ID:        r.ConversationID,
 			Type:      r.ChatType,
 			UpdatedAt: r.LastMsgTime,

@@ -35,7 +35,7 @@ func SetupMySQL() *gorm.DB {
 	}
 	slog.Info("MySQL connected successfully")
 	DB = db
-	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &CommentLike{}, &Faq{}, &Message{}, &Transaction{}, &Weather{}, &Group{}, &GroupMember{}, &Md{})
+	DB.AutoMigrate(&User{}, &Task{}, &VisitorSummary{}, &Visitor{}, &Comment{}, &CommentLike{}, &Faq{}, &Message{}, &Transaction{}, &Weather{}, &Group{}, &GroupMember{}, &Md{}, &Conversation{}, &ConversationMember{})
 	if DB.Migrator().HasColumn(&Md{}, "visibility") {
 		DB.Exec("ALTER TABLE `md` MODIFY COLUMN `visibility` TINYINT(1) NOT NULL")
 	}
@@ -46,24 +46,7 @@ func SetupMySQL() *gorm.DB {
 		DB.Exec("UPDATE `md` SET `contributors` = JSON_ARRAY(`user_id`) WHERE `contributors` IS NULL OR JSON_LENGTH(`contributors`) = 0")
 	}
 
-	// Migration: drop old tables (data inlined into messages)
-	if DB.Migrator().HasTable("conversation_read") {
-		DB.Migrator().DropTable("conversation_read")
-	}
-	if DB.Migrator().HasTable("conversation") {
-		DB.Migrator().DropTable("conversation")
-	}
-	if DB.Migrator().HasTable("conversation_member") {
-		DB.Migrator().DropTable("conversation_member")
-	}
-
-	// 为 messages 表补充新字段（如果列不存在，AutoMigrate 会自动添加）
-	if DB.Migrator().HasColumn(&Message{}, "sender_username") {
-		DB.Migrator().DropColumn(&Message{}, "sender_username")
-	}
-	if DB.Migrator().HasColumn(&Message{}, "sender_avatar") {
-		DB.Migrator().DropColumn(&Message{}, "sender_avatar")
-	}
+	migrateChatData(DB)
 
 	// Fix historical daily UV data (recalculate from visitor table)
 	err = VisitorSummary{}.FixDailyUV()
@@ -72,6 +55,98 @@ func SetupMySQL() *gorm.DB {
 	}
 
 	return DB
+}
+
+func migrateChatData(db *gorm.DB) {
+	if db.Migrator().HasTable("conversation_read") {
+		db.Migrator().DropTable("conversation_read")
+	}
+
+	// backfill conversations and members from existing messages
+	var convs []struct {
+		ConversationID string
+		ChatType       string
+		LastMessageAt  time.Time
+		LastMessageID  uint
+		LastSenderID   uint
+		LastMsgCount   int64
+	}
+	db.Model(&Message{}).
+		Select("conversation_id, chat_type, MAX(created_at) as last_message_at, MAX(id) as last_message_id, MAX(sender_id) as last_sender_id, COUNT(*) as last_msg_count").
+		Group("conversation_id, chat_type").
+		Scan(&convs)
+	for _, row := range convs {
+		if row.ConversationID == "" {
+			continue
+		}
+		var last Message
+		db.Where("conversation_id = ?", row.ConversationID).Order("created_at DESC, id DESC").First(&last)
+		var conv Conversation
+		if err := db.First(&conv, "id = ?", row.ConversationID).Error; err != nil {
+			conv = Conversation{
+				ID:              row.ConversationID,
+				Type:            row.ChatType,
+				LastMessageID:   last.ID,
+				LastMessageAt:   last.CreatedAt,
+				LastMessageText: last.Content,
+				LastMessageType: last.MessageType,
+				LastSenderID:    last.SenderID,
+				UpdatedAt:       last.CreatedAt,
+			}
+			db.Create(&conv)
+		}
+	}
+	var msgs []Message
+	db.Find(&msgs)
+	for _, msg := range msgs {
+		ensureConversationForMessage(db, msg)
+	}
+}
+
+func ensureConversationForMessage(db *gorm.DB, msg Message) {
+	if msg.ConversationID == "" {
+		return
+	}
+	convType := ConversationTypePrivate
+	if msg.ChatType == "group" {
+		convType = ConversationTypeGroup
+	}
+	if err := db.First(&Conversation{}, "id = ?", msg.ConversationID).Error; err != nil {
+		db.Create(&Conversation{
+			ID:              msg.ConversationID,
+			Type:            convType,
+			LastMessageID:   msg.ID,
+			LastMessageAt:   msg.CreatedAt,
+			LastMessageText: msg.Content,
+			LastMessageType: msg.MessageType,
+			LastSenderID:    msg.SenderID,
+			CreatedBy:       msg.SenderID,
+			UpdatedAt:       msg.CreatedAt,
+		})
+	}
+	joinConversationMember(db, msg.ConversationID, msg.SenderID, msg.CreatedAt)
+	if msg.ReceiverID > 0 {
+		joinConversationMember(db, msg.ConversationID, msg.ReceiverID, msg.CreatedAt)
+	}
+	if msg.GroupID > 0 {
+		var memberIDs []uint
+		memberIDs = GetGroupMembers(db, msg.GroupID)
+		for _, uid := range memberIDs {
+			joinConversationMember(db, msg.ConversationID, uid, msg.CreatedAt)
+		}
+	}
+}
+
+func joinConversationMember(db *gorm.DB, convID string, userID uint, joinedAt time.Time) {
+	if convID == "" || userID == 0 {
+		return
+	}
+	var existing ConversationMember
+	if err := db.Where("conversation_id = ? AND user_id = ? AND left_at IS NULL", convID, userID).First(&existing).Error; err == nil {
+		return
+	}
+	member := ConversationMember{ConversationID: convID, UserID: userID, JoinedAt: joinedAt}
+	db.Where("conversation_id = ? AND user_id = ?", convID, userID).Attrs(member).FirstOrCreate(&member)
 }
 
 func SetupRedis() {
