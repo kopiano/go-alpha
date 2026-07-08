@@ -182,3 +182,25 @@ time="2026-07-08 13:30:50.913" level=INFO source=controller/auth.go msg="auth.lo
 time="2026-07-08 13:30:50.913" level=INFO source=controller/auth.go msg="auth.login timing" step=total cost_ms=94 user_id=2
 time="2026-07-08 13:30:50.952" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=2484
 time="2026-07-08 13:30:50.954" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 13:34:36.940" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-08 13:34:36.949" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-08 13:34:37.155" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-08 13:34:37.158" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-08 13:34:37.158" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-08 13:34:37.160" level=INFO source=go-alpha/main.go msg="Server listening on :8000"
+time="2026-07-08 13:34:37.577" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=11919
+time="2026-07-08 13:34:39.934" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=2713
+time="2026-07-08 13:34:39.967" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 13:34:39.969" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=2713
+time="2026-07-08 13:38:15.890" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 13:38:16.021" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=2929
+time="2026-07-08 13:38:16.035" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=2929
+time="2026-07-08 13:38:16.043" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 13:38:31.771" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 13:38:32.023" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=2945
+time="2026-07-08 13:38:32.043" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 13:38:32.047" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=2945
+time="2026-07-08 13:38:33.207" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 13:38:33.356" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=2946
+time="2026-07-08 13:38:33.372" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 13:38:33.374" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=2946
