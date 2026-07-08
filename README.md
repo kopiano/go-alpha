@@ -157,3 +157,25 @@ cloudflared tunnel --protocol http2 --loglevel debug run api-test
 cloudflared tunnel --protocol http2 --edge-ip-version 4 run api-test
 ```
 
+## git
+### git commit 规范
+| Type       | 用途         | 示例                                          |
+| ---------- | ---------- | ------------------------------------------- |
+| `feat`     | 新功能        | `feat(chat): add private messaging`         |
+| `fix`      | 修复 Bug     | `fix(auth): resolve token expiration issue` |
+| `refactor` | 重构（不改功能）   | `refactor(user): simplify login logic`      |
+| `perf`     | 性能优化       | `perf(chat): optimize message query`        |
+| `style`    | 格式调整（不改逻辑） | `style(ui): format sidebar styles`          |
+| `docs`     | 文档更新       | `docs: update README`                       |
+| `test`     | 测试         | `test(chat): add websocket unit tests`      |
+| `build`    | 构建配置       | `build: update Dockerfile`                  |
+| `ci`       | CI/CD 配置   | `ci: add GitHub Actions workflow`           |
+| `chore`    | 杂项维护       | `chore: upgrade dependencies`               |
+| `revert`   | 回滚提交       | `revert: revert JWT authentication changes` |
+
+### 版本回滚
+```shell
+git log --oneline
+:4b98d3f
+git reset --hard 4b98d3f
+```

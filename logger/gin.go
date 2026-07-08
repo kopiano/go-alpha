@@ -39,70 +39,44 @@ func GinMiddleware() gin.HandlerFunc {
 		}
 
 		logTime := start.Format("2006-01-02 15:04:05.000")
-		line := fmt.Sprintf("%s %s %d %dms %s %s",
-			method,
-			path,
-			status,
-			durationMs,
-			logTime,
-			clientIP,
-		)
-		writeHTTPLogLine(line, status)
+		writeHTTPLogLine(method, path, int64(status), durationMs, logTime, clientIP)
 	}
 }
 
-func writeHTTPLogLine(line string, status int) {
-	textColor := colorGray
+func writeHTTPLogLine(method, path string, status int64, durationMs int64, logTime, clientIP string) {
+	methodColor := colorGray
 	statusColor := colorGreenBg
 	switch {
 	case status >= 500:
-		textColor = colorRed
+		methodColor = colorRed
 		statusColor = colorRedBg
 	case status >= 400:
-		textColor = colorYellow
+		methodColor = colorYellow
 		statusColor = colorYellowBg
 	case status >= 300:
-		textColor = colorCyan
+		methodColor = colorCyan
 		statusColor = colorCyanBg
 	default:
-		textColor = colorGreen
+		methodColor = colorGreen
 		statusColor = colorGreenBg
 	}
 
-	parts := splitHTTPLine(line)
-	if len(parts) != 6 {
-		_, _ = fmt.Fprintln(os.Stdout, textColor+line+colorReset)
-		return
-	}
-
-	_, _ = fmt.Fprintf(os.Stdout, "%s%s %s%s%s %s%s %s %s %s%s\n",
-		textColor,
-		parts[0],
-		parts[1],
-		statusColor,
-		parts[2],
-		colorReset,
-		textColor,
-		parts[3],
-		parts[4],
-		parts[5],
-		colorReset,
-	)
+	method = fmt.Sprintf("%-7s", method)
+	path = truncatePath(path, 28)
+	path = fmt.Sprintf("%-28s", path)
+	statusText := fmt.Sprintf("%3d", status)
+	_, _ = fmt.Fprintf(os.Stdout, "%s%s%s %s%s%s %6dms %-23s %-15s%s\n", methodColor, method, colorReset, statusColor, statusText, colorReset, durationMs, logTime, clientIP, colorReset)
 }
 
-func splitHTTPLine(line string) []string {
-	fields := make([]string, 0, 6)
-	start := 0
-	for i := 0; i < len(line); i++ {
-		if line[i] == ' ' {
-			if start < i {
-				fields = append(fields, line[start:i])
-			}
-			start = i + 1
-		}
+func truncatePath(s string, max int) string {
+	if len(s) <= max {
+		return s
 	}
-	if start < len(line) {
-		fields = append(fields, line[start:])
+	if max <= 3 {
+		return s[:max]
 	}
-	return fields
+
+	keepFront := (max - 3) / 2
+	keepBack := max - 3 - keepFront
+	return s[:keepFront] + "..." + s[len(s)-keepBack:]
 }

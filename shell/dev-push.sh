@@ -1,9 +1,8 @@
 git checkout dev
-git add .
 git status
-read -t 40 -p "[dev] Enter commit >>> " message
+read -t 100 -p "[dev] Enter commit >>> " message
 if [ "$message" != "" ]; then
-  git commit -m "[dev comment]: $message"
+  git commit -m "$message"
   git pull origin dev
   git push origin dev
   exit 0
@@ -14,4 +13,4 @@ else
 fi
 git checkout dev
 
-echo '------------------------'
+echo '----------- push success ！-------------'

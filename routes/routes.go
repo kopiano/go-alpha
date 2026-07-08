@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"path/filepath"
+
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -9,6 +11,10 @@ import (
 	"go-alpha/logger"
 	"go-alpha/middleware"
 )
+
+func avatarDir() string {
+	return filepath.Clean(controller.AvatarDir())
+}
 
 var (
 	authController        controller.AuthController        = controller.NewAuthController()
@@ -50,7 +56,7 @@ func SetupRouter() *gin.Engine {
 			auth.GET("/me", middleware.AuthRequired(), authController.Me)
 			auth.POST("/setting_user", middleware.AuthRequired(), authController.SettingUser)
 		}
-		v1.Static("/avatar", "/app/assets/avatar")
+		v1.Static("/avatar", avatarDir())
 		user := v1.Group("/user")
 		{
 			user.GET("", userController.GetAllUsers)

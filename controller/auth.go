@@ -31,9 +31,19 @@ func NewAuthController() *authController {
 	return &authController{}
 }
 
-const avatarDir = "/app/assets/avatar"
 const maxAvatarSize = 10 * 1024 * 1024
 const authBcryptCost = 10
+
+func avatarDir() string {
+	if v := strings.TrimSpace(os.Getenv("AVATAR_DIR")); v != "" {
+		return v
+	}
+	return filepath.Join(".", "assets", "avatar")
+}
+
+func AvatarDir() string {
+	return avatarDir()
+}
 
 func runAsync(taskName string, fn func()) {
 	go func() {
@@ -261,11 +271,12 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 		updates["avatar"] = avatarURL
 
 		runAsync("setting_user_save_avatar", func() {
-			if err := os.MkdirAll(avatarDir, 0755); err != nil {
+			dir := avatarDir()
+			if err := os.MkdirAll(dir, 0755); err != nil {
 				slog.Warn("SettingUser: MkdirAll failed", "error", err, "user_id", user.ID)
 				return
 			}
-			savePath := filepath.Join(avatarDir, filename)
+			savePath := filepath.Join(dir, filename)
 			src, err := file.Open()
 			if err != nil {
 				slog.Warn("SettingUser: Open avatar file failed", "error", err, "user_id", user.ID)
@@ -412,11 +423,12 @@ func (c *authController) Register(ctx *gin.Context) {
 
 		runAsync("register_save_avatar", func() {
 			// ensure directory exists
-			if err := os.MkdirAll(avatarDir, 0755); err != nil {
+			dir := avatarDir()
+			if err := os.MkdirAll(dir, 0755); err != nil {
 				slog.Warn("Register: MkdirAll failed", "error", err, "user_id", newUser.ID)
 				return
 			}
-			savePath := filepath.Join(avatarDir, filename)
+			savePath := filepath.Join(dir, filename)
 			src, err := file.Open()
 			if err != nil {
 				slog.Warn("Register: Open avatar file failed", "error", err, "user_id", newUser.ID)

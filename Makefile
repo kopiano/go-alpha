@@ -1,3 +1,10 @@
+push:
+	@git checkout dev
+	@git add .
+	@bash push.sh dev
+merge:
+	@bash push.sh main
+
 run:
 	@docker compose up -d --build backend
 	@cloudflared tunnel run api-test
