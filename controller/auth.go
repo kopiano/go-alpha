@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"image"
@@ -415,6 +416,11 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 	// 清除聊天联系人缓存，不阻塞设置响应
 	runAsync("invalidate_chat_user_info_cache_setting_user", func() {
 		invalidateChatUserInfoCache(user.ID)
+	})
+	runAsync("invalidate_chat_team_cache_setting_user", func() {
+		if models.RDB != nil {
+			_ = models.RDB.Del(context.Background(), "chat:team_info").Err()
+		}
 	})
 
 	// Return updated user

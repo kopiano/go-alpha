@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -679,7 +680,8 @@ func MarkConversationReadV2(c *gin.Context) {
 		return
 	}
 	if !canAccessConversation(models.DB, convID, userID) {
-		response.Failed("not a member of this conversation", c)
+		slog.Warn("MarkConversationReadV2: skip unread update for inaccessible conversation", "conversation_id", convID, "user_id", userID)
+		response.Success("ok", gin.H{}, c)
 		return
 	}
 	models.MarkConversationRead(models.DB, convID, userID)
@@ -763,13 +765,8 @@ func PostMessage(c *gin.Context) {
 			response.Failed("Invalid receiver", c)
 			return
 		}
-		var err error
 		body.ReceiverID = receiverID
-		body.ConversationID, err = models.EnsurePrivateConversation(models.DB, senderID, receiverID)
-		if err != nil {
-			response.Failed("Failed to create conversation", c)
-			return
-		}
+		body.ConversationID = models.PrivateConvID(senderID, receiverID)
 		sendPrivateChatMessage(c, senderID, &body)
 		return
 	case "group":
