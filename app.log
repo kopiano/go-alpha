@@ -318,3 +318,133 @@ time="2026-07-08 14:58:56.670" level=DEBUG source=controller/visitor.go msg="Rec
 time="2026-07-08 14:58:56.748" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=7770
 time="2026-07-08 14:58:56.758" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
 time="2026-07-08 14:59:04.489" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:03:56.553" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 15:03:56.728" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=8070
+time="2026-07-08 15:03:56.745" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=8070
+time="2026-07-08 15:03:56.748" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 15:14:55.911" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 15:14:56.104" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=8729
+time="2026-07-08 15:14:56.125" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=8729
+time="2026-07-08 15:14:56.197" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 15:14:58.494" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_1_2 user_id=2
+time="2026-07-08 15:22:47.430" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-08 15:22:47.441" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-08 15:22:47.714" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-08 15:22:47.716" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-08 15:22:47.716" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-08 15:22:47.718" level=INFO source=go-alpha/main.go msg="Server listening on :8000"
+time="2026-07-08 15:22:48.161" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12156
+time="2026-07-08 15:22:51.974" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=9205
+time="2026-07-08 15:22:52.020" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=9205
+time="2026-07-08 15:22:52.047" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 15:23:06.672" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:23:08.104" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:23:12.475" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 15:23:12.623" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=9225
+time="2026-07-08 15:23:12.637" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=9225
+time="2026-07-08 15:23:12.644" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 15:23:13.781" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:23:14.581" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:23:16.469" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_1_2 user_id=2
+time="2026-07-08 15:23:16.844" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:23:18.481" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:23:18.639" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:23:18.774" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:23:19.985" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:23:21.119" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:23:21.238" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:23:26.455" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_1_2 user_id=2
+time="2026-07-08 15:29:37.882" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 15:29:38.107" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=9611
+time="2026-07-08 15:29:38.133" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=9611
+time="2026-07-08 15:29:38.187" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 15:29:39.051" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:29:40.674" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:29:41.620" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_1_2 user_id=2
+time="2026-07-08 15:29:42.185" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:29:43.018" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:29:47.460" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:31:37.278" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 15:31:37.457" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=9730
+time="2026-07-08 15:31:37.478" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=9730
+time="2026-07-08 15:31:37.491" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 15:31:37.963" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:31:38.108" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:31:38.381" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:31:38.534" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:32:20.887" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 15:32:21.068" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=9774
+time="2026-07-08 15:32:21.093" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=9774
+time="2026-07-08 15:32:21.101" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 15:32:22.040" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:32:23.158" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:32:23.653" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:32:24.136" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:32:24.785" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_3 user_id=2
+time="2026-07-08 15:32:26.008" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_1_2 user_id=2
+time="2026-07-08 15:32:27.527" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_4 user_id=2
+time="2026-07-08 15:32:28.661" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=g_1 user_id=2
+time="2026-07-08 15:49:20.583" level=INFO source=controller/auth.go msg="auth.login timing" step=get_user_by_name cost_ms=12 username=kopiano
+time="2026-07-08 15:49:20.677" level=INFO source=controller/auth.go msg="auth.login timing" step=bcrypt_compare cost_ms=93 username=kopiano
+time="2026-07-08 15:49:20.679" level=INFO source=controller/auth.go msg="auth.login timing" step=generate_token cost_ms=1 user_id=2
+time="2026-07-08 15:49:20.690" level=INFO source=controller/auth.go msg="auth.login timing" step=db_update cost_ms=11 user_id=2
+time="2026-07-08 15:49:20.690" level=INFO source=controller/auth.go msg="auth.login timing" step=total cost_ms=124 user_id=2
+time="2026-07-08 15:55:55.771" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-08 15:55:55.782" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-08 15:55:56.050" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-08 15:55:56.074" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-08 15:55:56.074" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-08 15:55:56.080" level=INFO source=go-alpha/main.go msg="Server listening on :8000"
+time="2026-07-08 15:55:57.740" level=WARN source=controller/chat.go msg="backfillPrivateConversationMember: create member failed" conversation_id=p_2_3 user_id=2 error="Error 1292 (22007): Incorrect datetime value: '0000-00-00' for column 'last_read_at' at row 1"
+time="2026-07-08 15:55:58.537" level=WARN source=controller/chat.go msg="backfillPrivateConversationMember: create member failed" conversation_id=p_2_3 user_id=2 error="Error 1292 (22007): Incorrect datetime value: '0000-00-00' for column 'last_read_at' at row 1"
+time="2026-07-08 15:56:03.812" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12137
+time="2026-07-08 16:00:37.508" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-08 16:00:37.518" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-08 16:00:37.745" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-08 16:00:37.747" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-08 16:00:37.748" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-08 16:00:37.749" level=INFO source=go-alpha/main.go msg="Server listening on :8000"
+time="2026-07-08 16:00:38.182" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12201
+time="2026-07-08 16:00:56.144" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11489
+time="2026-07-08 16:00:56.174" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11489
+time="2026-07-08 16:00:56.178" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 16:01:02.588" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_4 user_id=2
+time="2026-07-08 16:01:08.815" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_4 user_id=2
+time="2026-07-08 16:01:15.333" level=WARN source=controller/chat.go msg="MarkConversationReadV2: skip unread update for inaccessible conversation" conversation_id=p_2_4 user_id=2
+time="2026-07-08 16:01:29.083" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 16:01:29.294" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11522
+time="2026-07-08 16:01:29.324" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11522
+time="2026-07-08 16:01:29.340" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 16:05:16.034" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-08 16:05:16.044" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-08 16:05:16.276" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-08 16:05:16.278" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-08 16:05:16.278" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-08 16:05:16.280" level=INFO source=go-alpha/main.go msg="Server listening on :8000"
+time="2026-07-08 16:05:16.729" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12100
+time="2026-07-08 16:05:18.046" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 16:05:20.492" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 16:05:20.757" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11754
+time="2026-07-08 16:05:20.808" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11754
+time="2026-07-08 16:05:20.822" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 16:05:37.776" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 16:05:37.909" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11771
+time="2026-07-08 16:05:37.932" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11771
+time="2026-07-08 16:05:37.938" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 16:05:39.232" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 16:05:39.312" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11772
+time="2026-07-08 16:05:39.326" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11772
+time="2026-07-08 16:05:39.336" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 16:05:40.085" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 16:05:40.174" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11773
+time="2026-07-08 16:05:40.188" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11773
+time="2026-07-08 16:05:40.192" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 16:05:40.639" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 16:05:40.708" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11774
+time="2026-07-08 16:05:40.717" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11774
+time="2026-07-08 16:05:40.721" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 16:05:46.407" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 16:05:46.497" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11779
+time="2026-07-08 16:05:46.532" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 16:05:46.537" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=11779
+time="2026-07-08 16:05:49.293" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="请求失败: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))"

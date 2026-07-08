@@ -157,7 +157,12 @@ func joinConversationMember(db *gorm.DB, convID string, userID uint, joinedAt ti
 	if err := db.Where("conversation_id = ? AND user_id = ? AND left_at IS NULL", convID, userID).First(&existing).Error; err == nil {
 		return
 	}
-	member := ConversationMember{ConversationID: convID, UserID: userID, JoinedAt: joinedAt}
+	member := ConversationMember{
+		ConversationID: convID,
+		UserID:         userID,
+		JoinedAt:       joinedAt,
+		LastReadAt:     joinedAt,
+	}
 	db.Where("conversation_id = ? AND user_id = ?", convID, userID).Attrs(member).FirstOrCreate(&member)
 }
 

@@ -646,6 +646,16 @@ func GetConversationMessagesV2(c *gin.Context) {
 		return
 	}
 	if !canAccessConversation(models.DB, convID, userID) {
+		a := models.PrivateConvUserA(convID)
+		b := models.PrivateConvUserB(convID)
+		if a > 0 && b > 0 && (userID == a || userID == b) {
+			if _, err := models.EnsurePrivateConversation(models.DB, a, b); err != nil {
+				response.Failed("failed to ensure conversation", c)
+				return
+			}
+		}
+	}
+	if !canAccessConversation(models.DB, convID, userID) {
 		response.Failed("not a member of this conversation", c)
 		return
 	}
@@ -721,7 +731,50 @@ func canAccessConversation(db *gorm.DB, convID string, userID uint) bool {
 	db.Model(&models.ConversationMember{}).
 		Where("conversation_id = ? AND user_id = ? AND left_at IS NULL", convID, userID).
 		Count(&count)
-	return count > 0
+	if count > 0 {
+		return true
+	}
+	return backfillPrivateConversationMember(db, convID, userID)
+}
+
+func backfillPrivateConversationMember(db *gorm.DB, convID string, userID uint) bool {
+	peerID := models.PrivateConvRecipient(userID, convID)
+	if peerID == 0 {
+		return false
+	}
+
+	var msgCount int64
+	if err := db.Model(&models.Message{}).
+		Where("conversation_id = ? AND ((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?))",
+			convID, userID, peerID, peerID, userID).
+		Count(&msgCount).Error; err != nil || msgCount == 0 {
+		return false
+	}
+
+	now := time.Now()
+	members := []models.ConversationMember{
+		{ConversationID: convID, UserID: userID, JoinedAt: now, LastReadAt: now},
+		{ConversationID: convID, UserID: peerID, JoinedAt: now, LastReadAt: now},
+	}
+	for _, member := range members {
+		var existing models.ConversationMember
+		err := db.Unscoped().
+			Where("conversation_id = ? AND user_id = ?", member.ConversationID, member.UserID).
+			First(&existing).Error
+		if err == nil {
+			if existing.LeftAt.Valid {
+				if err := db.Model(&existing).Update("left_at", nil).Error; err != nil {
+					slog.Warn("backfillPrivateConversationMember: restore member failed", "conversation_id", convID, "user_id", member.UserID, "error", err)
+				}
+			}
+			continue
+		}
+		if err := db.Create(&member).Error; err != nil {
+			slog.Warn("backfillPrivateConversationMember: create member failed", "conversation_id", convID, "user_id", member.UserID, "error", err)
+			return false
+		}
+	}
+	return true
 }
 
 // ─── Message APIs ───────────────────────────────────────────────
