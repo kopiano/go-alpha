@@ -1,17 +1,25 @@
 package controller
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"log/slog"
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/disintegration/imaging"
+	"github.com/chai2010/webp"
 	"go-alpha/models"
 	"go-alpha/response"
 	"golang.org/x/crypto/bcrypt"
@@ -32,6 +40,8 @@ func NewAuthController() *authController {
 }
 
 const maxAvatarSize = 10 * 1024 * 1024
+const defaultAvatarMaxWidth = 256
+const defaultAvatarQuality = 80
 const authBcryptCost = 10
 
 func avatarDir() string {
@@ -58,6 +68,41 @@ func runAsync(taskName string, fn func()) {
 
 func validateAvatarSize(file *multipart.FileHeader) bool {
 	return file != nil && file.Size <= maxAvatarSize
+}
+
+func avatarMaxWidth() int {
+	if v := strings.TrimSpace(os.Getenv("AVATAR_MAX_WIDTH")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return defaultAvatarMaxWidth
+}
+
+func avatarQuality() float32 {
+	if v := strings.TrimSpace(os.Getenv("AVATAR_QUALITY")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 100 {
+			return float32(n)
+		}
+	}
+	return defaultAvatarQuality
+}
+
+func saveAvatarAsWebp(savePath string, srcBytes []byte) error {
+	img, _, err := image.Decode(bytes.NewReader(srcBytes))
+	if err != nil {
+		return err
+	}
+	targetWidth := avatarMaxWidth()
+	if bounds := img.Bounds(); bounds.Dx() > targetWidth {
+		img = imaging.Resize(img, targetWidth, 0, imaging.Lanczos)
+	}
+	dst, err := os.Create(savePath)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+	return webp.Encode(dst, img, &webp.Options{Lossless: false, Quality: avatarQuality()})
 }
 
 func (c *authController) Me(ctx *gin.Context) {
@@ -265,6 +310,17 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 		filename := fmt.Sprintf("avatar-%d.webp", user.ID)
 		avatarURL := "/api/v1/avatar/" + filename
 		updates["avatar"] = avatarURL
+		srcBytes, err := file.Open()
+		if err != nil {
+			response.Failed("头像文件读取失败", ctx)
+			return
+		}
+		avatarData, err := io.ReadAll(srcBytes)
+		srcBytes.Close()
+		if err != nil {
+			response.Failed("头像文件读取失败", ctx)
+			return
+		}
 
 		runAsync("setting_user_save_avatar", func() {
 			dir := avatarDir()
@@ -273,22 +329,8 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 				return
 			}
 			savePath := filepath.Join(dir, filename)
-			src, err := file.Open()
-			if err != nil {
-				slog.Warn("SettingUser: Open avatar file failed", "error", err, "user_id", user.ID)
-				return
-			}
-			defer src.Close()
-
-			dst, err := os.Create(savePath)
-			if err != nil {
-				slog.Warn("SettingUser: Create avatar file failed", "error", err, "user_id", user.ID)
-				return
-			}
-			defer dst.Close()
-
-			if _, err := io.Copy(dst, src); err != nil {
-				slog.Warn("SettingUser: Copy avatar file failed", "error", err, "user_id", user.ID)
+			if err := saveAvatarAsWebp(savePath, avatarData); err != nil {
+				slog.Warn("SettingUser: Save avatar webp failed", "error", err, "user_id", user.ID)
 				return
 			}
 			slog.Info("auth.setting_user timing", "step", "save_avatar_async_done", "cost_ms", time.Since(avatarStart).Milliseconds(), "user_id", user.ID)
@@ -412,6 +454,17 @@ func (c *authController) Register(ctx *gin.Context) {
 		filename := fmt.Sprintf("avatar-%d.webp", newUser.ID)
 		avatarURL := "/api/v1/avatar/" + filename
 		newUser.Avatar = avatarURL
+		srcBytes, err := file.Open()
+		if err != nil {
+			response.Failed("头像文件读取失败", ctx)
+			return
+		}
+		avatarData, err := io.ReadAll(srcBytes)
+		srcBytes.Close()
+		if err != nil {
+			response.Failed("头像文件读取失败", ctx)
+			return
+		}
 
 		runAsync("register_save_avatar", func() {
 			// ensure directory exists
@@ -421,22 +474,8 @@ func (c *authController) Register(ctx *gin.Context) {
 				return
 			}
 			savePath := filepath.Join(dir, filename)
-			src, err := file.Open()
-			if err != nil {
-				slog.Warn("Register: Open avatar file failed", "error", err, "user_id", newUser.ID)
-				return
-			}
-			defer src.Close()
-
-			dst, err := os.Create(savePath)
-			if err != nil {
-				slog.Warn("Register: Create avatar file failed", "error", err, "user_id", newUser.ID)
-				return
-			}
-			defer dst.Close()
-
-			if _, err := io.Copy(dst, src); err != nil {
-				slog.Warn("Register: SaveUploadedFile failed", "error", err, "user_id", newUser.ID)
+			if err := saveAvatarAsWebp(savePath, avatarData); err != nil {
+				slog.Warn("Register: Save avatar webp failed", "error", err, "user_id", newUser.ID)
 				return
 			}
 			if err := models.DB.Model(&models.User{}).Where("id = ?", newUser.ID).Update("avatar", avatarURL).Error; err != nil {

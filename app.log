@@ -45,3 +45,51 @@ time="2026-07-08 12:27:16.749" level=INFO source=controller/chat_hub.go msg="Web
 time="2026-07-08 12:27:16.830" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=666813
 time="2026-07-08 12:27:16.849" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=666813
 time="2026-07-08 12:27:16.856" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=1 username=shville total=1
+time="2026-07-08 12:36:42.290" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=1 total=0
+time="2026-07-08 12:36:42.450" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667379
+time="2026-07-08 12:36:42.478" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667379
+time="2026-07-08 12:36:42.508" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=1 username=shville total=1
+time="2026-07-08 12:36:45.266" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=1 total=0
+time="2026-07-08 12:36:45.355" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667382
+time="2026-07-08 12:36:45.371" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667382
+time="2026-07-08 12:36:45.381" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=1 username=shville total=1
+time="2026-07-08 12:37:05.969" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=1 total=0
+time="2026-07-08 12:37:06.060" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667403
+time="2026-07-08 12:37:27.093" level=INFO source=controller/auth.go msg="auth.register timing" step=check_username cost_ms=2 username=shville
+time="2026-07-08 12:37:27.176" level=INFO source=controller/auth.go msg="auth.register timing" step=bcrypt_hash cost_ms=83 username=shville
+time="2026-07-08 12:37:27.185" level=INFO source=controller/auth.go msg="auth.register timing" step=db_create cost_ms=8 user_id=2
+time="2026-07-08 12:37:27.185" level=INFO source=controller/auth.go msg="auth.register timing" step=queue_avatar_async cost_ms=0 user_id=2
+time="2026-07-08 12:37:27.185" level=INFO source=controller/auth.go msg="auth.register timing" step=generate_token cost_ms=0 user_id=2
+time="2026-07-08 12:37:27.185" level=INFO source=controller/auth.go msg="auth.register timing" step=total cost_ms=94 user_id=2
+time="2026-07-08 12:37:27.185" level=WARN source=controller/auth.go msg="Register: MkdirAll failed" error="mkdir /app: read-only file system" user_id=2
+time="2026-07-08 12:37:28.282" level=INFO source=controller/auth.go msg="auth.login timing" step=get_user_by_name cost_ms=2 username=shville
+time="2026-07-08 12:37:28.361" level=INFO source=controller/auth.go msg="auth.login timing" step=bcrypt_compare cost_ms=79 username=shville
+time="2026-07-08 12:37:28.361" level=INFO source=controller/auth.go msg="auth.login timing" step=generate_token cost_ms=0 user_id=2
+time="2026-07-08 12:37:28.370" level=INFO source=controller/auth.go msg="auth.login timing" step=db_update cost_ms=8 user_id=2
+time="2026-07-08 12:37:28.370" level=INFO source=controller/auth.go msg="auth.login timing" step=total cost_ms=90 user_id=2
+time="2026-07-08 12:37:28.390" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667425
+time="2026-07-08 12:37:28.391" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=shville total=1
+time="2026-07-08 12:37:30.441" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 12:37:30.521" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667427
+time="2026-07-08 12:37:30.535" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667427
+time="2026-07-08 12:37:30.551" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=shville total=1
+time="2026-07-08 12:37:31.334" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 12:37:31.429" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667428
+time="2026-07-08 12:37:31.444" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667428
+time="2026-07-08 12:37:31.451" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=shville total=1
+time="2026-07-08 12:37:32.017" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 12:37:32.098" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667429
+time="2026-07-08 12:37:32.114" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667429
+time="2026-07-08 12:37:32.121" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=shville total=1
+time="2026-07-08 12:37:32.764" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 12:37:32.846" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667429
+time="2026-07-08 12:37:32.860" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667429
+time="2026-07-08 12:37:32.871" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=shville total=1
+time="2026-07-08 12:37:33.400" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 12:37:33.475" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667430
+time="2026-07-08 12:37:33.494" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667430
+time="2026-07-08 12:37:33.507" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=shville total=1
+time="2026-07-08 12:37:34.134" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=2 total=0
+time="2026-07-08 12:37:34.210" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667431
+time="2026-07-08 12:37:34.228" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=667431
+time="2026-07-08 12:37:34.234" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=shville total=1
