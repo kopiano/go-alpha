@@ -1,4 +1,4 @@
-FROM golang:1.26-bookworm
+FROM golang:1.26.4
 
 ENV GO111MODULE=on \
     GOPROXY=https://goproxy.cn,direct
