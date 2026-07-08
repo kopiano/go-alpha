@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -652,6 +653,18 @@ func GetConversationMessagesV2(c *gin.Context) {
 			if _, err := models.EnsurePrivateConversation(models.DB, a, b); err != nil {
 				response.Failed("failed to ensure conversation", c)
 				return
+			}
+		}
+		if strings.HasPrefix(convID, "g_") {
+			groupID, err := strconv.ParseUint(strings.TrimPrefix(convID, "g_"), 10, 64)
+			if err == nil && groupID > 0 {
+				memberIDs := models.GetGroupMembers(models.DB, uint(groupID))
+				for _, mid := range memberIDs {
+					if mid == userID {
+						models.EnsureGroupConversation(models.DB, uint(groupID), memberIDs)
+						break
+					}
+				}
 			}
 		}
 	}
