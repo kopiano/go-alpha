@@ -32,6 +32,7 @@ type Message struct {
 	// message
 	Content     string         `gorm:"type:text;not null" json:"content"` // 内容
 	MessageType int            `gorm:"default:1" json:"message_type"`     // 消息类型：1-4
+	FileName    string         `gorm:"type:varchar(255)" json:"file_name"`
 	FileURL     string         `gorm:"type:varchar(255)" json:"file_url"`
 	ReplyToID   *uint          `gorm:"index" json:"reply_to_id,omitempty"`
 	EditedAt    *time.Time     `json:"edited_at,omitempty"`

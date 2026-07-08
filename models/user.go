@@ -38,6 +38,12 @@ func (User) GetUserByName(name string) *User {
 	return &user
 }
 
+func (User) GetUserByNameOrEmail(identifier string) *User {
+	var user User
+	DB.Where("username = ? OR email = ?", identifier, identifier).First(&user)
+	return &user
+}
+
 func (user *User) AddUser() *User {
 	if user.Status == "" {
 		user.Status = "inactive"

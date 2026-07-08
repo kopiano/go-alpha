@@ -373,6 +373,8 @@ func BroadcastMessageWithSender(msg models.Message, senderUsername, senderAvatar
 		"message_type":    msg.MessageType,
 		"msg_type":        msgTypeStr,
 		"content":         msg.Content,
+		"file_name":       msg.FileName,
+		"file_url":        msg.FileURL,
 		"status":          1,
 		"created_at":      msg.CreatedAt.Format(time.RFC3339),
 		"time":            msg.CreatedAt.Format("15:04"),

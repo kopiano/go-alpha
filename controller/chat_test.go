@@ -92,6 +92,7 @@ func TestSuccessMessagePayload(t *testing.T) {
 		ReceiverID:     2,
 		MessageType:    models.MsgText,
 		Content:        "hello",
+		FileName:       "demo.png",
 		FileURL:        "https://example.com/file.png",
 		Status:         1,
 	}
@@ -109,6 +110,9 @@ func TestSuccessMessagePayload(t *testing.T) {
 	}
 	if payload["file_url"] != "https://example.com/file.png" {
 		t.Fatalf("file_url = %v, want file url", payload["file_url"])
+	}
+	if payload["file_name"] != "demo.png" {
+		t.Fatalf("file_name = %v, want demo.png", payload["file_name"])
 	}
 }
 

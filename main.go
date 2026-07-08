@@ -23,8 +23,8 @@ func main() {
 	scheduler.StartHotSearchScheduler()
 
 	r := routes.SetupRouter()
-	slog.Info("Server listening on :8080")
-	if err := r.Run(":8080"); err != nil {
+	slog.Info("Server listening on :8000")
+	if err := r.Run(":8000"); err != nil {
 		slog.Error("Server failed", "error", err)
 	}
 }

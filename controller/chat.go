@@ -77,6 +77,9 @@ func successMessagePayload(msg models.Message, sender models.User) gin.H {
 	if msg.GroupID > 0 {
 		payload["group_id"] = msg.GroupID
 	}
+	if msg.FileName != "" {
+		payload["file_name"] = msg.FileName
+	}
 	if msg.FileURL != "" {
 		payload["file_url"] = msg.FileURL
 	}
@@ -414,6 +417,7 @@ func sendPrivateChatMessage(c *gin.Context, senderID uint, body *postMessageBody
 		ReceiverID:     recipientID,
 		MessageType:    body.MessageType,
 		Content:        body.Content,
+		FileName:       body.FileName,
 		FileURL:        body.FileURL,
 	}
 	if err := models.SaveMessage(models.DB, &msg); err != nil {
@@ -456,6 +460,7 @@ func sendGroupChatMessage(c *gin.Context, senderID uint, body *postMessageBody) 
 		GroupID:        body.GroupID,
 		MessageType:    body.MessageType,
 		Content:        body.Content,
+		FileName:       body.FileName,
 		FileURL:        body.FileURL,
 	}
 	if err := models.SaveMessage(models.DB, &msg); err != nil {
