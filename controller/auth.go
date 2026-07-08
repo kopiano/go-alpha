@@ -262,11 +262,7 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 			return
 		}
 		avatarStart := time.Now()
-		ext := filepath.Ext(file.Filename)
-		if ext == "" {
-			ext = ".jpg"
-		}
-		filename := fmt.Sprintf("avatar-%d%s", user.ID, ext)
+		filename := fmt.Sprintf("avatar-%d.webp", user.ID)
 		avatarURL := "/api/v1/avatar/" + filename
 		updates["avatar"] = avatarURL
 
@@ -413,11 +409,7 @@ func (c *authController) Register(ctx *gin.Context) {
 			return
 		}
 		avatarStart := time.Now()
-		ext := filepath.Ext(file.Filename)
-		if ext == "" {
-			ext = ".jpg"
-		}
-		filename := fmt.Sprintf("avatar-%d%s", newUser.ID, ext)
+		filename := fmt.Sprintf("avatar-%d.webp", newUser.ID)
 		avatarURL := "/api/v1/avatar/" + filename
 		newUser.Avatar = avatarURL
 
