@@ -224,7 +224,7 @@ POST 请求示例：
   "location": "United States Mountain View",
   "status": "online",
   "user_name": "alice",
-  "avatar": "/api/v1/avatar/avatar-1.jpg"
+  "avatar": "/api/v1/avatar/avatar-shville.webp"
 }
 ```
 
@@ -271,7 +271,7 @@ POST 成功响应：
     "device": "Desktop",
     "status": "online",
     "user_name": "alice",
-    "avatar": "/api/v1/avatar/avatar-1.jpg",
+    "avatar": "/api/v1/avatar/avatar-shville.webp",
     "visitor": {
       "id": 1,
       "visitor_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -287,7 +287,7 @@ POST 成功响应：
       "device": "Desktop",
       "status": "online",
       "user_name": "alice",
-      "avatar": "/api/v1/avatar/avatar-1.jpg",
+      "avatar": "/api/v1/avatar/avatar-shville.webp",
       "created_at": "2026-06-30T12:00:00+08:00",
       "updated_at": "2026-06-30T12:30:00+08:00"
     }
@@ -339,7 +339,7 @@ GET 成功响应示例：
         "device": "Desktop",
         "status": "online",
         "user_name": "alice",
-        "avatar": "/api/v1/avatar/avatar-1.jpg"
+        "avatar": "/api/v1/avatar/avatar-shville.webp"
       }
     ]
   },
@@ -424,27 +424,27 @@ GET /api/v1/chat/ws                            WebSocket 入口。用于实时�
       "id": 1,
       "members": [
         {
-          "avatar": "/api/v1/avatar/avatar-1.jpg",
+          "avatar": "/api/v1/avatar/avatar-shville.webp",
           "user_id": 1,
           "username": "shville"
         },
         {
-          "avatar": "/api/v1/avatar/avatar-2.jpg",
+          "avatar": "/api/v1/avatar/avatar-kopiano.webp",
           "user_id": 2,
           "username": "test"
         },
         {
-          "avatar": "/api/v1/avatar/avatar-3.png",
+          "avatar": "/api/v1/avatar/avatar-admin.webp",
           "user_id": 3,
           "username": "admin"
         },
         {
-          "avatar": "/api/v1/avatar/avatar-4.jpg",
+          "avatar": "/api/v1/avatar/avatar-kope.webp",
           "user_id": 4,
           "username": "kope"
         },
         {
-          "avatar": "/api/v1/avatar/avatar-5.jpg",
+          "avatar": "/api/v1/avatar/avatar-amoe.webp",
           "user_id": 5,
           "username": "amoe"
         }
@@ -455,22 +455,22 @@ GET /api/v1/chat/ws                            WebSocket 入口。用于实时�
       {
         "user_id": 2,
         "username": "test",
-        "avatar": "/api/v1/avatar/avatar-2.jpg"
+        "avatar": "/api/v1/avatar/avatar-kopiano.webp"
       },
       {
         "user_id": 3,
         "username": "admin",
-        "avatar": "/api/v1/avatar/avatar-3.png"
+        "avatar": "/api/v1/avatar/avatar-admin.webp"
       },
       {
         "user_id": 4,
         "username": "kope",
-        "avatar": "/api/v1/avatar/avatar-4.jpg"
+        "avatar": "/api/v1/avatar/avatar-kope.webp"
       },
       {
         "user_id": 5,
         "username": "amoe",
-        "avatar": "/api/v1/avatar/avatar-5.jpg"
+        "avatar": "/api/v1/avatar/avatar-amoe.webp"
       }
     ]
   },
@@ -505,7 +505,7 @@ GET /api/v1/chat/conversations/:id/messages
       "created_at": "2026-07-08T09:58:00Z",
       "updated_at": "2026-07-08T09:58:00Z",
       "sender_username": "alice",
-      "sender_avatar": "/api/v1/avatar/avatar-1.jpg"
+      "sender_avatar": "/api/v1/avatar/avatar-shville.webp"
     },
     {
       "id": 102,
@@ -524,7 +524,7 @@ GET /api/v1/chat/conversations/:id/messages
       "created_at": "2026-07-08T09:59:10Z",
       "updated_at": "2026-07-08T09:59:10Z",
       "sender_username": "bob",
-      "sender_avatar": "/api/v1/avatar/avatar-2.jpg"
+      "sender_avatar": "/api/v1/avatar/avatar-kopiano.webp"
     }
   ]
 },
@@ -568,7 +568,6 @@ POST /api/v1/chat/messages
 - file_url：文件/图片地址，可选
 
 补充规则：
-  - 如果 chat_type 为空，后端会根据 group_id、conversation_id、receiver_id 自动推断
   - 文本消息 message_type=1 时，content 必填
   - 私聊消息必须保证不是给自己发
   - 群聊消息必须是群成员
@@ -583,7 +582,7 @@ POST /api/v1/chat/messages
       "conversation_id": "p_1_2",
       "sender_id": 1,
       "sender_username": "alice",
-      "sender_avatar": "/api/v1/avatar/avatar-1.jpg",
+      "sender_avatar": "/api/v1/avatar/avatar-shville.webp",
       "message_type": 1,
       "content": "hello",
       "status": 0,
@@ -605,7 +604,7 @@ POST /api/v1/chat/messages
       "conversation_id": "g_1",
       "sender_id": 1,
       "sender_username": "alice",
-      "sender_avatar": "/api/v1/avatar/avatar-1.jpg",
+      "sender_avatar": "/api/v1/avatar/avatar-shville.webp",
       "message_type": 1,
       "content": "大家好",
       "status": 0,

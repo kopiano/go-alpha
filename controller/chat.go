@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -747,9 +746,9 @@ func PostMessage(c *gin.Context) {
 
 	if body.ChatType == "" {
 		switch {
-		case body.GroupID > 0 || strings.HasPrefix(body.ConversationID, "g_"):
+		case body.GroupID > 0:
 			body.ChatType = "group"
-		case body.ReceiverID > 0 || body.RecipientID > 0 || strings.HasPrefix(body.ConversationID, "p_"):
+		case body.ReceiverID > 0 || body.RecipientID > 0:
 			body.ChatType = "private"
 		}
 	}
@@ -760,24 +759,9 @@ func PostMessage(c *gin.Context) {
 		if receiverID == 0 {
 			receiverID = body.RecipientID
 		}
-		if body.ConversationID != "" {
-			if expected := models.PrivateConvRecipient(senderID, body.ConversationID); expected > 0 {
-				receiverID = expected
-			}
-		}
-		if receiverID == 0 && body.ConversationID != "" {
-			receiverID = models.PrivateConvRecipient(senderID, body.ConversationID)
-		}
 		if receiverID == 0 || receiverID == senderID {
 			response.Failed("Invalid receiver", c)
 			return
-		}
-		if body.ConversationID != "" && body.RecipientID > 0 {
-			expected := models.PrivateConvRecipient(senderID, body.ConversationID)
-			if expected != 0 && expected != body.RecipientID {
-				response.Failed("recipient_id does not match conversation_id", c)
-				return
-			}
 		}
 		var err error
 		body.ReceiverID = receiverID
@@ -789,18 +773,6 @@ func PostMessage(c *gin.Context) {
 		sendPrivateChatMessage(c, senderID, &body)
 		return
 	case "group":
-		if body.GroupID == 0 && strings.HasPrefix(body.ConversationID, "g_") {
-			if gid, err := strconv.ParseUint(strings.TrimPrefix(body.ConversationID, "g_"), 10, 64); err == nil {
-				body.GroupID = uint(gid)
-			}
-		}
-		if body.ConversationID != "" && body.GroupID > 0 {
-			expected := strings.TrimPrefix(body.ConversationID, "g_")
-			if expected != strconv.FormatUint(uint64(body.GroupID), 10) && strings.HasPrefix(body.ConversationID, "g_") {
-				response.Failed("group_id does not match conversation_id", c)
-				return
-			}
-		}
 		if body.GroupID > 0 {
 			sendGroupChatMessage(c, senderID, &body)
 			return

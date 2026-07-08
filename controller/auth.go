@@ -3,7 +3,6 @@ package controller
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"image"
 	_ "image/gif"
@@ -16,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/disintegration/imaging"
@@ -86,6 +86,41 @@ func avatarQuality() float32 {
 		}
 	}
 	return defaultAvatarQuality
+}
+
+func avatarFileName(username string) string {
+	username = strings.TrimSpace(strings.ToLower(username))
+	if username == "" {
+		return "avatar.webp"
+	}
+	var b strings.Builder
+	b.Grow(len(username) + len("avatar--.webp"))
+	b.WriteString("avatar-")
+	lastDash := false
+	for _, r := range username {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if !lastDash {
+			b.WriteByte('-')
+			lastDash = true
+		}
+	}
+	name := strings.Trim(b.String(), "-")
+	if name == "avatar" || name == "" {
+		return "avatar.webp"
+	}
+	return name + ".webp"
+}
+
+func avatarBaseNameFromURL(url string) (string, bool) {
+	url = strings.TrimSpace(url)
+	if !strings.HasPrefix(url, "/api/v1/avatar/") {
+		return "", false
+	}
+	return filepath.Base(url), true
 }
 
 func saveAvatarAsWebp(savePath string, srcBytes []byte) error {
@@ -299,6 +334,28 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 		updates["password"] = string(hashed)
 	}
 
+	effectiveUsername := user.Username
+	if nextUsername, ok := updates["username"].(string); ok && nextUsername != "" {
+		effectiveUsername = nextUsername
+	}
+
+	if username != "" && username != user.Username && user.Avatar != "" {
+		if oldBase, ok := avatarBaseNameFromURL(user.Avatar); ok {
+			nextBase := avatarFileName(effectiveUsername)
+			if oldBase != nextBase {
+				oldPath := filepath.Join(avatarDir(), oldBase)
+				newPath := filepath.Join(avatarDir(), nextBase)
+				if err := os.MkdirAll(avatarDir(), 0755); err == nil {
+					if err := os.Rename(oldPath, newPath); err == nil {
+						updates["avatar"] = "/api/v1/avatar/" + nextBase
+					} else if !os.IsNotExist(err) {
+						slog.Warn("SettingUser: rename avatar failed", "error", err, "user_id", user.ID, "from", oldPath, "to", newPath)
+					}
+				}
+			}
+		}
+	}
+
 	// Handle avatar upload (form-data only)
 	file, err := ctx.FormFile("avatar")
 	if err == nil {
@@ -307,7 +364,7 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 			return
 		}
 		avatarStart := time.Now()
-		filename := fmt.Sprintf("avatar-%d.webp", user.ID)
+		filename := avatarFileName(effectiveUsername)
 		avatarURL := "/api/v1/avatar/" + filename
 		updates["avatar"] = avatarURL
 		srcBytes, err := file.Open()
@@ -451,7 +508,7 @@ func (c *authController) Register(ctx *gin.Context) {
 			return
 		}
 		avatarStart := time.Now()
-		filename := fmt.Sprintf("avatar-%d.webp", newUser.ID)
+		filename := avatarFileName(username)
 		avatarURL := "/api/v1/avatar/" + filename
 		newUser.Avatar = avatarURL
 		srcBytes, err := file.Open()
