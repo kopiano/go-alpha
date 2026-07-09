@@ -30,17 +30,17 @@ func invalidateTeamCache() {
 	if RDB == nil {
 		return
 	}
-	_ = RDB.Del(context.Background(), "chat:team_info").Err()
+	_ = RDB.Del(context.Background(), "chat:group_info").Err()
 }
 
-// EnsureTeamGroup 确保 Team 群组存在，并将所有用户加为成员
+// EnsureTeamGroup 确保 Group 群组存在，并将所有用户加为成员
 func EnsureTeamGroup(db *gorm.DB) {
 	var group Group
-	err := db.Where("name = ?", "Team").First(&group).Error
+	err := db.Where("name = ?", "Group").First(&group).Error
 	if err != nil {
-		group = Group{Name: "Team"}
+		group = Group{Name: "Group"}
 		db.Create(&group)
-		slog.Info("Team group created", "id", group.ID)
+		slog.Info("Group created", "id", group.ID)
 		invalidateTeamCache()
 	}
 
@@ -56,15 +56,15 @@ func EnsureTeamGroup(db *gorm.DB) {
 		}
 	}
 	if added > 0 {
-		slog.Info("New members joined Team", "count", added, "total", len(users))
+		slog.Info("New members joined Group", "count", added, "total", len(users))
 		invalidateTeamCache()
 	}
 }
 
-// AddUserToTeam 将用户加入 Team 群组
+// AddUserToTeam 将用户加入 Group 群组
 func AddUserToTeam(db *gorm.DB, userID uint) {
 	var group Group
-	if err := db.Where("name = ?", "Team").First(&group).Error; err != nil {
+	if err := db.Where("name = ?", "Group").First(&group).Error; err != nil {
 		return
 	}
 	var count int64
@@ -75,10 +75,10 @@ func AddUserToTeam(db *gorm.DB, userID uint) {
 	}
 }
 
-// GetTeamGroup 获取 Team 群组信息（含成员）
+// GetTeamGroup 获取 Group 群组信息（含成员）
 func GetTeamGroup(db *gorm.DB) *Group {
 	var group Group
-	if err := db.Where("name = ?", "Team").First(&group).Error; err != nil {
+	if err := db.Where("name = ?", "Group").First(&group).Error; err != nil {
 		return nil
 	}
 	return &group

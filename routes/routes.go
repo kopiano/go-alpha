@@ -140,6 +140,9 @@ func SetupRouter() *gin.Engine {
 			chat.GET("/ws", func(c *gin.Context) {
 				controller.HandleWebSocket(c.Writer, c.Request)
 			})
+			// 游客可直接查看群聊列表
+			chat.GET("/groups", controller.GetGroups)
+			chat.GET("/groups/:id/messages", controller.GetGroupsMessage)
 		}
 		// Transaction
 		transaction := v1.Group("/transactions")

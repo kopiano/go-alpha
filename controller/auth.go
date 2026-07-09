@@ -436,7 +436,7 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 	})
 	runAsync("invalidate_chat_team_cache_setting_user", func() {
 		if models.RDB != nil {
-			_ = models.RDB.Del(context.Background(), "chat:team_info").Err()
+			_ = models.RDB.Del(context.Background(), "chat:group_info").Err()
 		}
 	})
 

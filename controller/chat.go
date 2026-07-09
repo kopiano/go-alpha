@@ -1,12 +1,12 @@
 package controller
 
 import (
-	"io"
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
-	"net/http"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -278,7 +278,7 @@ func chatUserContactsCacheKey(userID uint) string {
 }
 
 func chatTeamInfoCacheKey() string {
-	return "chat:team_info"
+	return "chat:group_info"
 }
 
 func getCachedChatUserInfo(userID uint) (map[string]any, bool) {
@@ -559,6 +559,131 @@ func getChatTeamInfo() gin.H {
 	return teamInfo
 }
 
+func getChatGroupsInfo() []gin.H {
+	var groups []models.Group
+	if err := models.DB.Order("id ASC").Find(&groups).Error; err != nil || len(groups) == 0 {
+		return []gin.H{}
+	}
+
+	groupIDs := make([]uint, 0, len(groups))
+	for _, g := range groups {
+		groupIDs = append(groupIDs, g.ID)
+	}
+
+	type groupMemberRow struct {
+		GroupID uint
+		UserID  uint
+	}
+	var memberRows []groupMemberRow
+	_ = models.DB.Model(&models.GroupMember{}).
+		Select("group_id, user_id").
+		Where("group_id IN ?", groupIDs).
+		Scan(&memberRows).Error
+
+	memberIDsByGroup := make(map[uint][]uint, len(groups))
+	uniqueUserIDs := make(map[uint]struct{})
+	for _, row := range memberRows {
+		memberIDsByGroup[row.GroupID] = append(memberIDsByGroup[row.GroupID], row.UserID)
+		uniqueUserIDs[row.UserID] = struct{}{}
+	}
+
+	userMap := make(map[uint]models.User, len(uniqueUserIDs))
+	if len(uniqueUserIDs) > 0 {
+		userIDs := make([]uint, 0, len(uniqueUserIDs))
+		for uid := range uniqueUserIDs {
+			userIDs = append(userIDs, uid)
+		}
+		var users []models.User
+		if err := models.DB.Select("id, username, avatar").Where("id IN ?", userIDs).Find(&users).Error; err == nil {
+			for _, u := range users {
+				userMap[u.ID] = u
+			}
+		}
+	}
+
+	type latestRow struct {
+		GroupID     uint
+		Content     string
+		MessageType int
+		CreatedAt   time.Time
+	}
+	latestMap := make(map[uint]latestRow, len(groups))
+	if len(groupIDs) > 0 {
+		type maxRow struct {
+			GroupID uint
+			MaxID   uint
+		}
+		var maxRows []maxRow
+		if err := models.DB.Model(&models.Message{}).
+			Select("group_id, MAX(id) AS max_id").
+			Where("chat_type = ? AND group_id IN ? AND deleted_at IS NULL", "group", groupIDs).
+			Group("group_id").
+			Scan(&maxRows).Error; err == nil && len(maxRows) > 0 {
+			msgIDs := make([]uint, 0, len(maxRows))
+			for _, row := range maxRows {
+				if row.MaxID > 0 {
+					msgIDs = append(msgIDs, row.MaxID)
+				}
+			}
+			if len(msgIDs) > 0 {
+				var latestMsgs []struct {
+					ID             uint
+					ConversationID string
+					GroupID        uint
+					Content        string
+					MessageType    int
+					CreatedAt      time.Time
+				}
+				models.DB.Model(&models.Message{}).
+					Select("id, conversation_id, group_id, content, message_type, created_at").
+					Where("id IN ?", msgIDs).
+					Find(&latestMsgs)
+				for _, msg := range latestMsgs {
+					latestMap[msg.GroupID] = latestRow{
+						GroupID:     msg.GroupID,
+						Content:     msg.Content,
+						MessageType: msg.MessageType,
+						CreatedAt:   msg.CreatedAt,
+					}
+				}
+			}
+		}
+	}
+
+	result := make([]gin.H, 0, len(groups))
+	for _, g := range groups {
+		convID := "g_" + strconv.FormatUint(uint64(g.ID), 10)
+		members := make([]map[string]any, 0, len(memberIDsByGroup[g.ID]))
+		for _, uid := range memberIDsByGroup[g.ID] {
+			if u, ok := userMap[uid]; ok {
+				members = append(members, map[string]any{"user_id": u.ID, "username": u.Username, "avatar": u.Avatar})
+			}
+		}
+		item := gin.H{
+			"id":              g.ID,
+			"name":            g.Name,
+			"conversation_id": convID,
+			"members":         members,
+		}
+		if latest, ok := latestMap[g.ID]; ok {
+			lastMsg := latest.Content
+			switch latest.MessageType {
+			case models.MsgEmoji:
+				lastMsg = "[表情]"
+			case models.MsgImage:
+				lastMsg = "[图片]"
+			case models.MsgFile:
+				lastMsg = "[文件]"
+			}
+			item["last_msg"] = lastMsg
+			item["last_msg_type"] = latest.MessageType
+			item["last_time"] = latest.CreatedAt.Format("2006-01-02 15:04:05")
+		}
+		result = append(result, item)
+	}
+	return result
+}
+
 // ─── Message send paths ─────────────────────────────────────────
 
 func sendPrivateChatMessage(c *gin.Context, senderID uint, body *postMessageBody) {
@@ -804,7 +929,7 @@ func getChatDirectoryUsers(userID uint, items []models.ConversationListItem) []c
 func GetConversationMessagesV2(c *gin.Context) {
 	convID := c.Param("id")
 	userID := c.GetUint("userId")
-	if convID == "" || userID == 0 {
+	if convID == "" {
 		response.Failed("invalid request", c)
 		return
 	}
@@ -857,6 +982,38 @@ func GetConversationMessagesV2(c *gin.Context) {
 	response.Success("ok", gin.H{"messages": models.PopulateSenderForMessages(models.DB, msgs)}, c)
 }
 
+func GetGroupsMessage(c *gin.Context) {
+	convID := strings.TrimSpace(c.Param("id"))
+	if convID == "" {
+		response.Failed("invalid conversation_id", c)
+		return
+	}
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	beforeID, _ := strconv.ParseUint(c.DefaultQuery("before_id", "0"), 10, 64)
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	if beforeID > 0 {
+		msgs, err := models.GetConversationMessagesBefore(models.DB, convID, uint(beforeID), limit)
+		if err != nil {
+			response.Failed("failed to fetch messages", c)
+			return
+		}
+		response.Success("ok", gin.H{"messages": models.PopulateSenderForMessages(models.DB, msgs)}, c)
+		return
+	}
+
+	msgs, err := models.GetConversationMessages(models.DB, convID, limit, offset)
+	if err != nil {
+		response.Failed("failed to fetch messages", c)
+		return
+	}
+	response.Success("ok", gin.H{"messages": models.PopulateSenderForMessages(models.DB, msgs)}, c)
+}
+
 func MarkConversationReadV2(c *gin.Context) {
 	convID := c.Param("id")
 	userID := c.GetUint("userId")
@@ -898,7 +1055,7 @@ func CreateConversationV2(c *gin.Context) {
 }
 
 func GetGroups(c *gin.Context) {
-	response.Success("ok", gin.H{"groups": []gin.H{getChatTeamInfo()}}, c)
+	response.Success("ok", gin.H{"groups": getChatGroupsInfo()}, c)
 }
 
 func canAccessConversation(db *gorm.DB, convID string, userID uint) bool {

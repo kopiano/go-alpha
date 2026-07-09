@@ -275,6 +275,33 @@ func GetConversationMessagesBefore(db *gorm.DB, convID string, beforeID uint, li
 	return msgs, nil
 }
 
+func GetGroupMessages(db *gorm.DB, groupID uint, limit, offset int) ([]Message, error) {
+	query := db.Where("chat_type = ? AND group_id = ?", ConversationTypeGroup, groupID)
+	var msgs []Message
+	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&msgs).Error; err != nil {
+		return nil, err
+	}
+	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
+		msgs[i], msgs[j] = msgs[j], msgs[i]
+	}
+	return msgs, nil
+}
+
+func GetGroupMessagesBefore(db *gorm.DB, groupID, beforeID uint, limit int) ([]Message, error) {
+	query := db.Where("chat_type = ? AND group_id = ?", ConversationTypeGroup, groupID)
+	if beforeID > 0 {
+		query = query.Where("id < ?", beforeID)
+	}
+	var msgs []Message
+	if err := query.Order("id DESC").Limit(limit).Find(&msgs).Error; err != nil {
+		return nil, err
+	}
+	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
+		msgs[i], msgs[j] = msgs[j], msgs[i]
+	}
+	return msgs, nil
+}
+
 // SaveMessage 保存消息
 func SaveMessage(db *gorm.DB, msg *Message) error {
 	err := db.Create(msg).Error
