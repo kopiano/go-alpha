@@ -108,6 +108,27 @@ docker compose up -d --build backend
 docker compose logs --tail=50 backend
 ```
 
+**如果拉取go-1.26.4失败**
+1. 使用 Docker Desktop旧版本为4.43.0, 不要使用最新版
+2. 关闭代理：Setting - Resources - Proxies - 确保关闭 "Manual proxy configuration"
+3. Setting - Docker Engine 新增
+```json
+{
+  "registry-mirrors": [
+    "https://docker.m.daocloud.io",
+    "https://docker.1panel.live",
+    "https://docker.xuanyuan.me",
+    "https://docker.unsee.tech"
+  ]
+}
+```
+
+**查看build构建错误**
+```shell
+docker build --progress=plain --no-cache -t your-image-name .
+```
+4. 然后使用docker compose up -d
+
 ### cloudflare tunnel
 ```shell
 $ cloudflared tunnel create api-test

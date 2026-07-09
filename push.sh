@@ -10,8 +10,8 @@ cd $CUR
 if [ ${#} -ge 1 ]; then
   case "$1" in
     "dev"   ) bash dev-push.sh                        ;;
-    "main"  ) bash main-push.sh                     ;;
-    "both"  ) bash dev-push.sh && bash main-push.sh ;;
+    "main"  ) bash main-push.sh                       ;;
+    "both"  ) bash dev-push.sh && bash main-push.sh   ;;
     "tag"   ) case $2 in
               "-d") bash tag-delete.sh                ;;
               ""  ) bash tag-release.sh               ;;

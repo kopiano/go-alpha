@@ -483,3 +483,265 @@ time="2026-07-08 16:18:03.961" level=INFO source=controller/chat_hub.go msg="Web
 time="2026-07-08 16:18:04.052" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=12517
 time="2026-07-08 16:18:04.072" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=12517
 time="2026-07-08 16:18:04.075" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=2 username=kopiano total=1
+time="2026-07-08 21:06:50.134" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-08 21:06:50.135" level=ERROR source=models/db.go msg="Failed to connect MySQL" error="dial tcp 127.0.0.1:3306: connect: connection refused"
+time="2026-07-08 21:07:27.463" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-08 21:07:27.479" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-08 21:07:27.672" level=ERROR source=models/db.go msg="Failed to connect Redis" error="dial tcp 127.0.0.1:6379: connect: connection refused"
+time="2026-07-08 21:08:33.943" level=INFO source=go-alpha/main.go msg="Starting server"
+time="2026-07-08 21:08:33.949" level=INFO source=models/db.go msg="MySQL connected successfully"
+time="2026-07-08 21:08:34.049" level=INFO source=models/db.go msg="Redis connected successfully"
+time="2026-07-08 21:08:34.050" level=INFO source=scheduler/hot_search.go msg="Hot search scheduler started, interval: 6h"
+time="2026-07-08 21:08:34.050" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search fetch starting..."
+time="2026-07-08 21:08:34.052" level=INFO source=go-alpha/main.go msg="Server listening on :8000"
+time="2026-07-08 21:08:34.606" level=INFO source=scheduler/hot_search.go msg="Scheduled hot search completed" output_size=12568
+time="2026-07-08 21:08:40.191" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=29953
+time="2026-07-08 21:08:41.111" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=29954
+time="2026-07-08 21:08:42.119" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=29955
+time="2026-07-08 21:08:42.926" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=29956
+time="2026-07-08 21:08:43.568" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=29956
+time="2026-07-08 21:09:21.563" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=29994
+time="2026-07-08 21:10:38.141" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=30071
+time="2026-07-08 21:28:45.528" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=31158
+time="2026-07-08 21:38:55.665" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=31768
+time="2026-07-08 21:41:21.717" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=31915
+time="2026-07-08 21:42:25.720" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=31979
+time="2026-07-08 21:43:37.663" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=32050
+time="2026-07-08 21:47:28.588" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=32281
+time="2026-07-08 21:49:28.704" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=32402
+time="2026-07-08 21:49:53.545" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=32426
+time="2026-07-08 22:05:11.487" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=33344
+time="2026-07-08 22:05:31.636" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f693e372-a7cc-4478-a291-568a8256cf23 duration=33364
+time="2026-07-08 22:06:18.423" level=INFO source=controller/auth.go msg="auth.register timing" step=check_username cost_ms=1 username=shville
+time="2026-07-08 22:06:18.514" level=INFO source=controller/auth.go msg="auth.register timing" step=bcrypt_hash cost_ms=91 username=shville
+time="2026-07-08 22:06:18.520" level=INFO source=controller/auth.go msg="auth.register timing" step=db_create cost_ms=5 user_id=3
+time="2026-07-08 22:06:18.520" level=INFO source=controller/auth.go msg="auth.register timing" step=queue_avatar_async cost_ms=0 user_id=3
+time="2026-07-08 22:06:18.522" level=INFO source=controller/auth.go msg="auth.register timing" step=generate_token cost_ms=1 user_id=3
+time="2026-07-08 22:06:18.522" level=INFO source=controller/auth.go msg="auth.register timing" step=total cost_ms=102 user_id=3
+time="2026-07-08 22:06:18.567" level=INFO source=controller/auth.go msg="auth.register timing" step=save_avatar_async_done cost_ms=47 user_id=3
+time="2026-07-08 22:06:19.464" level=INFO source=controller/auth.go msg="auth.login timing" step=get_user_by_name cost_ms=0 username=shville
+time="2026-07-08 22:06:19.553" level=INFO source=controller/auth.go msg="auth.login timing" step=bcrypt_compare cost_ms=89 username=shville
+time="2026-07-08 22:06:19.553" level=INFO source=controller/auth.go msg="auth.login timing" step=generate_token cost_ms=0 user_id=3
+time="2026-07-08 22:06:19.556" level=INFO source=controller/auth.go msg="auth.login timing" step=db_update cost_ms=2 user_id=3
+time="2026-07-08 22:06:19.556" level=INFO source=controller/auth.go msg="auth.login timing" step=total cost_ms=94 user_id=3
+time="2026-07-08 22:06:19.588" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:06:19.591" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=701556
+time="2026-07-08 22:06:58.115" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:07:20.089" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:07:20.191" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=701617
+time="2026-07-08 22:07:20.203" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=701617
+time="2026-07-08 22:07:20.207" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:07:22.941" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:08:17.791" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:08:18.129" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=701675
+time="2026-07-08 22:08:18.155" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=701675
+time="2026-07-08 22:08:18.160" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:08:22.395" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:08:24.268" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:08:24.369" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=701681
+time="2026-07-08 22:08:24.395" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=701681
+time="2026-07-08 22:08:24.396" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:08:28.966" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:08:37.688" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:08:37.963" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=701695
+time="2026-07-08 22:08:38.072" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=701695
+time="2026-07-08 22:08:38.074" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:08:41.084" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:21:31.396" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:21:31.609" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702468
+time="2026-07-08 22:21:31.637" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:21:31.638" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702468
+time="2026-07-08 22:21:35.069" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:24:51.466" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:24:51.695" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702668
+time="2026-07-08 22:24:51.713" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702668
+time="2026-07-08 22:24:51.715" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:24:55.326" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:25:50.436" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:25:50.587" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702727
+time="2026-07-08 22:25:50.611" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702727
+time="2026-07-08 22:25:50.614" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:25:55.227" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:25:55.311" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702732
+time="2026-07-08 22:25:55.335" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:25:55.335" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702732
+time="2026-07-08 22:25:58.480" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:25:58.869" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:26:06.299" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:26:06.388" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702743
+time="2026-07-08 22:26:06.407" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702743
+time="2026-07-08 22:26:06.410" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:26:09.102" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:26:10.459" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:26:10.560" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702747
+time="2026-07-08 22:26:10.571" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702747
+time="2026-07-08 22:26:10.579" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:26:13.458" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:26:21.085" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:26:21.184" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702758
+time="2026-07-08 22:26:21.207" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702758
+time="2026-07-08 22:26:21.210" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:26:24.993" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:26:59.178" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:26:59.276" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702796
+time="2026-07-08 22:26:59.296" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702796
+time="2026-07-08 22:26:59.300" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:27:03.452" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:27:14.590" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:27:14.701" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702811
+time="2026-07-08 22:27:14.725" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702811
+time="2026-07-08 22:27:14.726" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:27:18.672" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:27:48.844" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:27:48.948" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702846
+time="2026-07-08 22:27:48.972" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=702846
+time="2026-07-08 22:27:48.976" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:27:51.858" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:31:55.539" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:31:55.713" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703092
+time="2026-07-08 22:31:55.746" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703092
+time="2026-07-08 22:31:55.747" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:32:01.235" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:34:43.709" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:34:43.888" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703260
+time="2026-07-08 22:34:43.926" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:34:43.926" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703260
+time="2026-07-08 22:34:53.140" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:34:58.775" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:34:59.058" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703276
+time="2026-07-08 22:34:59.085" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703276
+time="2026-07-08 22:34:59.089" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:35:02.141" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:37:20.210" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:37:20.375" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703417
+time="2026-07-08 22:37:20.398" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703417
+time="2026-07-08 22:37:20.413" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:37:24.836" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:37:49.573" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:37:49.704" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703446
+time="2026-07-08 22:37:49.726" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703446
+time="2026-07-08 22:37:49.731" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:37:53.162" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:38:30.901" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:38:31.070" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703488
+time="2026-07-08 22:38:31.089" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703488
+time="2026-07-08 22:38:31.090" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:38:33.672" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:39:01.530" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:39:01.655" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703518
+time="2026-07-08 22:39:01.672" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703518
+time="2026-07-08 22:39:01.674" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:39:07.092" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:39:58.399" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:39:58.556" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703575
+time="2026-07-08 22:39:58.582" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703575
+time="2026-07-08 22:39:58.586" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:40:02.106" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:40:53.209" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:40:53.420" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703630
+time="2026-07-08 22:40:53.469" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703630
+time="2026-07-08 22:40:53.475" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:40:58.191" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:41:24.942" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:41:25.058" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703662
+time="2026-07-08 22:41:25.095" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703662
+time="2026-07-08 22:41:25.101" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:41:30.571" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:41:46.543" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:41:46.628" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703683
+time="2026-07-08 22:41:46.644" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703683
+time="2026-07-08 22:41:46.647" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:41:51.809" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:41:56.225" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:41:56.484" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703693
+time="2026-07-08 22:41:56.592" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703693
+time="2026-07-08 22:41:56.597" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:42:01.066" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:46:57.879" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:46:58.092" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703995
+time="2026-07-08 22:46:58.124" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=703995
+time="2026-07-08 22:46:58.126" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:47:02.354" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:50:56.491" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:50:56.695" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704233
+time="2026-07-08 22:50:56.715" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704233
+time="2026-07-08 22:50:56.718" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:50:59.779" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:58:09.089" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:58:09.296" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704666
+time="2026-07-08 22:58:09.317" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:58:09.319" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704666
+time="2026-07-08 22:58:12.177" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:59:05.380" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:59:05.494" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704722
+time="2026-07-08 22:59:05.517" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704722
+time="2026-07-08 22:59:05.518" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:59:11.395" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:59:18.008" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:59:18.119" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704735
+time="2026-07-08 22:59:18.154" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704735
+time="2026-07-08 22:59:18.172" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:59:20.986" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 22:59:28.334" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 22:59:28.451" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704745
+time="2026-07-08 22:59:28.470" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704745
+time="2026-07-08 22:59:28.470" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 22:59:32.048" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 23:00:52.962" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 23:00:53.308" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704830
+time="2026-07-08 23:00:53.336" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704830
+time="2026-07-08 23:00:53.338" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 23:00:56.366" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 23:01:59.651" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 23:01:59.770" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704896
+time="2026-07-08 23:01:59.790" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=704896
+time="2026-07-08 23:01:59.800" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 23:02:02.303" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 23:04:09.991" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 23:04:10.107" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=705027
+time="2026-07-08 23:04:10.128" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=705027
+time="2026-07-08 23:04:10.139" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 23:04:12.981" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-08 23:06:07.378" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 23:06:07.513" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=705144
+time="2026-07-08 23:06:07.550" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=705144
+time="2026-07-08 23:06:07.556" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 23:06:11.014" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 23:06:11.111" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=705148
+time="2026-07-08 23:06:11.133" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=c04c321b-3142-4358-a9f4-52c1400cd354 duration=705148
+time="2026-07-08 23:06:11.134" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-08 23:06:11.153" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-08 23:06:24.540" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=114755
+time="2026-07-08 23:06:30.989" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=114761
+time="2026-07-08 23:06:58.748" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=114789
+time="2026-07-08 23:07:25.158" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=114815
+time="2026-07-08 23:09:32.932" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=114943
+time="2026-07-08 23:10:04.291" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=114975
+time="2026-07-09 01:22:04.118" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=122894
+time="2026-07-09 01:22:15.575" level=INFO source=controller/auth.go msg="auth.login timing" step=get_user_by_name cost_ms=1 username=shville
+time="2026-07-09 01:22:15.655" level=INFO source=controller/auth.go msg="auth.login timing" step=bcrypt_compare cost_ms=80 username=shville
+time="2026-07-09 01:22:15.658" level=INFO source=controller/auth.go msg="auth.login timing" step=generate_token cost_ms=2 user_id=3
+time="2026-07-09 01:22:15.660" level=INFO source=controller/auth.go msg="auth.login timing" step=db_update cost_ms=2 user_id=3
+time="2026-07-09 01:22:15.660" level=INFO source=controller/auth.go msg="auth.login timing" step=total cost_ms=87 user_id=3
+time="2026-07-09 01:22:15.687" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-09 01:22:15.688" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=122906
+time="2026-07-09 01:22:18.259" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-09 01:22:20.038" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-09 01:22:20.120" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=122910
+time="2026-07-09 01:22:20.138" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-09 01:22:20.139" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=122910
+time="2026-07-09 01:22:22.707" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-09 01:22:27.251" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-09 01:25:48.338" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-09 01:25:48.619" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=123119
+time="2026-07-09 01:25:48.645" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=123119
+time="2026-07-09 01:25:48.650" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-09 01:26:04.097" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-09 01:26:31.008" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0
+time="2026-07-09 01:26:31.133" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=123161
+time="2026-07-09 01:26:31.169" level=DEBUG source=controller/visitor.go msg="RecordVisit called" visitor_id=f3bf06b3-3457-47cf-8c82-1c530b0d5108 duration=123161
+time="2026-07-09 01:26:31.175" level=INFO source=controller/chat_hub.go msg="WebSocket client connected" userID=3 username=shville total=1
+time="2026-07-09 01:26:33.555" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-09 01:27:15.722" level=WARN source=controller/weather.go msg="weather: python returned non-200" error="当前天气请求失败: 401"
+time="2026-07-09 01:33:08.764" level=WARN source=controller/chat_hub.go msg="WebSocket read error" userID=3 error="websocket: close 1006 (abnormal closure): unexpected EOF"
+time="2026-07-09 01:33:08.764" level=INFO source=controller/chat_hub.go msg="WebSocket client disconnected" userID=3 total=0

@@ -90,6 +90,7 @@ func SetupRouter() *gin.Engine {
 		v1.GET("/36kr", func(c *gin.Context) {
 			c.JSON(200, gin.H{"message": "因36kr改用字节火山引擎需要真人滑块验证，接口已弃用"})
 		})
+		v1.GET("/stocks", controller.GetStockQuote)
 		doc := v1.Group("/docs")
 		{
 			doc.GET("", docController.List)
