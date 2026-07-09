@@ -1,9 +1,14 @@
 package controller
 
 import (
+	"io"
 	"context"
 	"encoding/json"
 	"log/slog"
+	"net/http"
+	"mime/multipart"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -586,6 +591,57 @@ func sendGroupChatMessage(c *gin.Context, senderID uint, body *postMessageBody) 
 	response.Success("Message sent", successMessagePayload(msg, sender), c)
 }
 
+func bindPostMessageBody(c *gin.Context) (postMessageBody, *multipart.FileHeader, []byte, error) {
+	var body postMessageBody
+	if strings.Contains(c.GetHeader("Content-Type"), "multipart/form-data") {
+		body.ConversationID = c.PostForm("conversation_id")
+		body.ChatType = c.PostForm("chat_type")
+		body.FileName = c.PostForm("file_name")
+		body.FileURL = c.PostForm("file_url")
+		body.Content = c.PostForm("content")
+		if v := c.PostForm("recipient_id"); v != "" {
+			if n, err := strconv.ParseUint(v, 10, 64); err == nil {
+				body.RecipientID = uint(n)
+			}
+		}
+		if v := c.PostForm("receiver_id"); v != "" {
+			if n, err := strconv.ParseUint(v, 10, 64); err == nil {
+				body.ReceiverID = uint(n)
+			}
+		}
+		if v := c.PostForm("group_id"); v != "" {
+			if n, err := strconv.ParseUint(v, 10, 64); err == nil {
+				body.GroupID = uint(n)
+			}
+		}
+		if v := c.PostForm("message_type"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				body.MessageType = n
+			}
+		}
+		file, fileHeader, err := c.Request.FormFile("file")
+		if err != nil {
+			file, fileHeader, err = c.Request.FormFile("image")
+		}
+		if err != nil && err != http.ErrMissingFile {
+			return body, nil, nil, err
+		}
+		if file != nil {
+			defer file.Close()
+			data, err := io.ReadAll(file)
+			if err != nil {
+				return body, nil, nil, err
+			}
+			return body, fileHeader, data, nil
+		}
+		return body, nil, nil, nil
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		return body, nil, nil, err
+	}
+	return body, nil, nil, nil
+}
+
 // ─── API response types ─────────────────────────────────────────
 
 type ConversationUser struct {
@@ -899,22 +955,50 @@ func backfillPrivateConversationMember(db *gorm.DB, convID string, userID uint) 
 // ─── Message APIs ───────────────────────────────────────────────
 
 func PostMessage(c *gin.Context) {
-	var body postMessageBody
-	if err := c.ShouldBindJSON(&body); err != nil {
+	body, fileHeader, fileBytes, err := bindPostMessageBody(c)
+	if err != nil {
 		response.Failed("invalid request body", c)
 		return
+	}
+	senderID := c.GetUint("userId")
+	if senderID == 0 {
+		response.Failed("unauthorized", c)
+		return
+	}
+	if fileHeader != nil && len(fileBytes) > 0 {
+		if !validateChatImageSize(fileHeader) {
+			response.Failed("image too large", c)
+			return
+		}
+		me := models.User{}.GetUserById(int(senderID))
+		if me.ID == 0 {
+			response.Failed("unauthorized", c)
+			return
+		}
+		nowTs := time.Now().UnixNano()
+		filename := chatImageFileName(me.Username, nowTs)
+		savePath := filepath.Join(chatImageDir(), filename)
+		if err := os.MkdirAll(chatImageDir(), 0o755); err != nil {
+			response.Failed("failed to prepare image storage", c)
+			return
+		}
+		if err := saveChatImageAsWebp(savePath, fileBytes); err != nil {
+			slog.Warn("chat image conversion failed", "error", err)
+			response.Failed("image conversion failed", c)
+			return
+		}
+		body.FileName = filename
+		body.FileURL = "/api/v1/chat/image/" + filename
+		body.MessageType = models.MsgImage
+		if body.Content == "" {
+			body.Content = "[图片]"
+		}
 	}
 	if body.MessageType == 0 || body.MessageType == models.MsgText {
 		if body.Content == "" {
 			response.Failed("content is required for text/reply messages", c)
 			return
 		}
-	}
-
-	senderID := c.GetUint("userId")
-	if senderID == 0 {
-		response.Failed("unauthorized", c)
-		return
 	}
 	normalizeMessageBody(&body)
 

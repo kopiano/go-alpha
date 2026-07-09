@@ -181,7 +181,7 @@ cloudflared tunnel --protocol http2 --edge-ip-version 4 run api-test
 ## git
 ### git commit 规范
 | Type       | 用途         | 示例                                          |
-| ---------- | ---------- | ------------------------------------------- |
+|------------|------------|---------------------------------------------|
 | `feat`     | 新功能        | `feat(chat): add private messaging`         |
 | `fix`      | 修复 Bug     | `fix(auth): resolve token expiration issue` |
 | `refactor` | 重构（不改功能）   | `refactor(user): simplify login logic`      |
