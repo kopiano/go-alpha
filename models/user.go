@@ -11,8 +11,8 @@ type User struct {
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
-	Username    string         `gorm:"type:varchar(100);not null" json:"username"`
-	Email       string         `gorm:"type:varchar(100)" json:"email"`
+	Username    string         `gorm:"type:varchar(100);not null;index" json:"username"`
+	Email       string         `gorm:"type:varchar(100);index" json:"email"`
 	Password    string         `gorm:"type:varchar(100);not null" json:"-"`
 	Website     string         `gorm:"type:varchar(100)" json:"website"`
 	Status      string         `gorm:"type:varchar(100);default:inactive" json:"status"`
@@ -20,27 +20,34 @@ type User struct {
 	LastLoginAt *time.Time     `gorm:"type:datetime;default:null;index" json:"last_login_at"`
 }
 
+func userListColumns() string {
+	return "id, created_at, updated_at, username, email, website, status, avatar, last_login_at"
+}
+
 func (User) GetAllUsers() *[]User {
 	var users []User
-	DB.Find(&users)
+	DB.Select(userListColumns()).Find(&users)
 	return &users
 }
 
 func (User) GetUserById(id int) *User {
 	var user User
-	DB.First(&user, id)
+	DB.Select(userListColumns()+", password").Take(&user, id)
 	return &user
 }
 
 func (User) GetUserByName(name string) *User {
 	var user User
-	DB.Where("username = ?", name).First(&user)
+	DB.Select(userListColumns()+", password").Where("username = ?", name).Take(&user)
 	return &user
 }
 
 func (User) GetUserByNameOrEmail(identifier string) *User {
 	var user User
-	DB.Where("username = ? OR email = ?", identifier, identifier).First(&user)
+	DB.Select(userListColumns()+", password").
+		Where("username = ?", identifier).
+		Or("email = ?", identifier).
+		Take(&user)
 	return &user
 }
 

@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"log/slog"
 	"mime/multipart"
 	"os"
@@ -18,9 +18,9 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/gin-gonic/gin"
-	"github.com/disintegration/imaging"
 	"github.com/chai2010/webp"
+	"github.com/disintegration/imaging"
+	"github.com/gin-gonic/gin"
 	"go-alpha/models"
 	"go-alpha/response"
 	"golang.org/x/crypto/bcrypt"
@@ -413,6 +413,23 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 	}
 	slog.Info("auth.setting_user timing", "step", "db_update", "cost_ms", time.Since(start).Milliseconds(), "user_id", user.ID, "fields", len(updates))
 
+	// Keep the in-memory user in sync so we do not need to hit user table again.
+	if v, ok := updates["username"].(string); ok && v != "" {
+		user.Username = v
+	}
+	if v, ok := updates["email"].(string); ok {
+		user.Email = v
+	}
+	if v, ok := updates["password"].(string); ok && v != "" {
+		user.Password = v
+	}
+	if v, ok := updates["avatar"].(string); ok {
+		user.Avatar = v
+	}
+	if v, ok := updates["status"].(string); ok {
+		user.Status = v
+	}
+
 	// 清除聊天联系人缓存，不阻塞设置响应
 	runAsync("invalidate_chat_user_info_cache_setting_user", func() {
 		invalidateChatUserInfoCache(user.ID)
@@ -423,13 +440,11 @@ func (c *authController) SettingUser(ctx *gin.Context) {
 		}
 	})
 
-	// Return updated user
-	updated := models.User{}.GetUserById(int(user.ID))
 	response.Success("设置已保存", gin.H{
-		"id":       updated.ID,
-		"username": updated.Username,
-		"email":    updated.Email,
-		"avatar":   updated.Avatar,
+		"id":       user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+		"avatar":   user.Avatar,
 	}, ctx)
 	slog.Info("auth.setting_user timing", "step", "total", "cost_ms", time.Since(start).Milliseconds(), "user_id", user.ID)
 }

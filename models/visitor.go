@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"log/slog"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -24,34 +25,45 @@ func (VisitorSummary) TableName() string {
 }
 
 func (VisitorSummary) Upsert(date string, uv, pv int64) {
-	err := DB.Where("date = ?", date).Assign(VisitorSummary{UV: uv, PV: pv}).FirstOrCreate(&VisitorSummary{
-		Date: date,
-		UV:   uv,
-		PV:   pv,
-	}).Error
+	err := DB.Exec(`
+		INSERT INTO visitor_summary (date, uv, pv, created_at, updated_at)
+		VALUES (?, ?, ?, NOW(), NOW())
+		ON DUPLICATE KEY UPDATE
+			uv = VALUES(uv),
+			pv = VALUES(pv),
+			updated_at = VALUES(updated_at)
+	`, date, uv, pv).Error
 	if err != nil {
 		slog.Error("VisitorSummary.Upsert failed", "date", date, "uv", uv, "pv", pv, "error", err)
 	}
 }
 
+func DateRange(date string) (time.Time, time.Time, error) {
+	start, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(date), time.Local)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	return start, start.AddDate(0, 0, 1), nil
+}
+
 type Visitor struct {
 	ID                uint      `gorm:"primarykey" json:"id"`
 	VisitorID         string    `gorm:"type:varchar(64);uniqueIndex;not null" json:"visitor_id"`
-	UserName          string    `gorm:"type:varchar(100)" json:"user_name"`
+	UserName          string    `gorm:"type:varchar(100);index:idx_visitor_ip_user,priority:2" json:"user_name"`
 	Avatar            string    `gorm:"type:varchar(255)" json:"avatar"`
-	IP                string    `gorm:"type:varchar(64)" json:"ip"`
+	IP                string    `gorm:"type:varchar(64);index:idx_visitor_fp_ip,priority:2;index:idx_visitor_ip_user,priority:1" json:"ip"`
 	Country           string    `gorm:"type:varchar(100)" json:"country"`
 	City              string    `gorm:"type:varchar(100)" json:"city"`
 	Location          string    `gorm:"type:varchar(255)" json:"location"`
 	FirstSeen         time.Time `gorm:"type:datetime;not null" json:"first_seen"`
-	LastSeen          time.Time `gorm:"type:datetime;not null" json:"last_seen"`
+	LastSeen          time.Time `gorm:"type:datetime;not null;index" json:"last_seen"`
 	TotalBrowseTime   int64     `gorm:"default:0;not null" json:"total_browse_time"`
 	VisitCount        int64     `gorm:"default:0;not null" json:"visit_count"`
 	OS                string    `gorm:"type:varchar(50)" json:"os"`
 	Browser           string    `gorm:"type:varchar(50)" json:"browser"`
 	Device            string    `gorm:"type:varchar(50)" json:"device"`
 	Status            string    `gorm:"type:varchar(50);default:inactive" json:"status"`
-	DeviceFingerprint string    `gorm:"type:varchar(512)" json:"device_fingerprint"`
+	DeviceFingerprint string    `gorm:"type:varchar(512);index:idx_visitor_fp_ip,priority:1" json:"device_fingerprint"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }
@@ -126,12 +138,12 @@ func applyVisitorUpdates(existing *Visitor, incoming *Visitor, duration int64, n
 		"location":           incoming.Location,
 		"last_seen":          now,
 		// "total_browse_time" is updated by AddDuration (heartbeat) only
-		"visit_count":        gorm.Expr("visit_count + 1"),
-		"os":                 incoming.OS,
-		"browser":            incoming.Browser,
-		"device":             incoming.Device,
-		"status":             incoming.Status,
-		"avatar":             incoming.Avatar,
+		"visit_count": gorm.Expr("visit_count + 1"),
+		"os":          incoming.OS,
+		"browser":     incoming.Browser,
+		"device":      incoming.Device,
+		"status":      incoming.Status,
+		"avatar":      incoming.Avatar,
 	}
 	// Only overwrite user_name when the incoming value is non-empty,
 	// otherwise a logout (guest heartbeat) would wipe the linked username.
@@ -165,6 +177,25 @@ func (visitor *Visitor) UpdateUserName(userName string) error {
 		Update("user_name", userName).Error
 }
 
+func (visitor *Visitor) UpdateLocation(country, city, location string) error {
+	updates := map[string]any{}
+	if country != "" {
+		updates["country"] = country
+	}
+	if city != "" {
+		updates["city"] = city
+	}
+	if location != "" {
+		updates["location"] = location
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	return DB.Model(&Visitor{}).
+		Where("visitor_id = ?", visitor.VisitorID).
+		Updates(updates).Error
+}
+
 func (Visitor) GetAllVisitors() ([]Visitor, error) {
 	var visitors []Visitor
 	err := DB.Order("last_seen desc").Find(&visitors).Error
@@ -182,15 +213,14 @@ func (VisitorSummary) GetAllSummaries() ([]VisitorSummary, error) {
 func (VisitorSummary) FixDailyUV() error {
 	return DB.Exec(`
 		UPDATE visitor_summary vs
-		SET uv = (
-			SELECT COUNT(*) FROM visitor v
-			WHERE DATE(v.last_seen) = vs.date
-		),
-		updated_at = NOW()
-		WHERE vs.uv != (
-			SELECT COUNT(*) FROM visitor v
-			WHERE DATE(v.last_seen) = vs.date
-		)
+		JOIN (
+			SELECT DATE(last_seen) AS date_key, COUNT(*) AS uv
+			FROM visitor
+			GROUP BY DATE(last_seen)
+		) daily ON daily.date_key = vs.date
+		SET vs.uv = daily.uv,
+			vs.updated_at = NOW()
+		WHERE vs.uv != daily.uv
 	`).Error
 }
 

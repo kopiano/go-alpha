@@ -10,11 +10,16 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 COPY go.mod go.sum ./
-RUN go mod download
+# RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
 COPY . .
 # RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-w -s" -o /app/go-alpha
-RUN go build -o /app/go-alpha
+# RUN go build -o /app/go-alpha
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -trimpath -ldflags="-w -s" -o /app/go-alpha .
 
 EXPOSE 8080
 ENTRYPOINT ["/app/go-alpha"]

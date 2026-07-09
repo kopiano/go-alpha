@@ -14,6 +14,29 @@ import (
 	"go-alpha/response"
 )
 
+func broadcastToAll(data []byte) {
+	if len(data) == 0 {
+		return
+	}
+	ChatHub.broadcast <- data
+}
+
+func sendToClient(client *Client, data []byte) {
+	if client == nil || len(data) == 0 {
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Warn("WebSocket send failed", "userID", client.userID, "panic", r)
+		}
+	}()
+	select {
+	case client.send <- data:
+	default:
+		slog.Warn("WebSocket send queue full", "userID", client.userID)
+	}
+}
+
 // ─── WebSocket 升级器 ───────────────────────────────────────────
 
 var upgrader = websocket.Upgrader{
@@ -33,11 +56,19 @@ type WSMessage struct {
 	UserID         uint   `json:"user_id,omitempty"`
 	Username       string `json:"username,omitempty"`
 	Avatar         string `json:"avatar,omitempty"`
+	ClientMsgID    string `json:"client_msg_id,omitempty"`
+	ToUserID       uint   `json:"to_user_id,omitempty"`
+	RecipientID    uint   `json:"recipient_id,omitempty"`
+	ReceiverID     uint   `json:"receiver_id,omitempty"`
+	GroupID        uint   `json:"group_id,omitempty"`
+	ChatType       string `json:"chat_type,omitempty"`
+	MessageType    int    `json:"message_type,omitempty"`
 	MsgType        string `json:"msg_type,omitempty"` // text | emoji | image | file
 	ConversationID string `json:"conversation_id,omitempty"`
 	Content        string `json:"content,omitempty"`
 	FileName       string `json:"file_name,omitempty"`
 	FileURL        string `json:"file_url,omitempty"`
+	Status         int    `json:"status,omitempty"`
 	Time           string `json:"time,omitempty"`
 	Payload        any    `json:"payload,omitempty"`
 }
@@ -91,6 +122,74 @@ func (c *Client) readPump() {
 			msg.Type = "message"
 		}
 
+		if msg.Type == "message" && msg.Event == "" && (msg.ChatType != "" || msg.Content != "" || msg.FileName != "" || msg.FileURL != "") {
+			body := &postMessageBody{
+				ConversationID: msg.ConversationID,
+				RecipientID:    msg.RecipientID,
+				ReceiverID:     msg.ReceiverID,
+				ChatType:       msg.ChatType,
+				GroupID:        msg.GroupID,
+				MessageType:    msg.MessageType,
+				Content:        msg.Content,
+				FileName:       msg.FileName,
+				FileURL:        msg.FileURL,
+			}
+			if body.ChatType == "" {
+				if body.GroupID > 0 {
+					body.ChatType = "group"
+				} else {
+					body.ChatType = "private"
+				}
+			}
+			if body.RecipientID == 0 && msg.ToUserID > 0 {
+				body.RecipientID = msg.ToUserID
+			}
+			if body.ReceiverID == 0 && msg.ToUserID > 0 {
+				body.ReceiverID = msg.ToUserID
+			}
+			savedMsg, sender, err := buildChatMessage(c.userID, body)
+			if err != nil {
+				ack, _ := json.Marshal(map[string]any{
+					"type":            "message",
+					"event":           "message.ack",
+					"client_msg_id":   msg.ClientMsgID,
+					"status":          0,
+					"code":            400,
+					"message":         "invalid message",
+					"conversation_id": msg.ConversationID,
+				})
+				sendToClient(c, ack)
+				continue
+			}
+			if err := models.SaveMessage(models.DB, &savedMsg); err != nil {
+				ack, _ := json.Marshal(map[string]any{
+					"type":            "message",
+					"event":           "message.ack",
+					"client_msg_id":   msg.ClientMsgID,
+					"status":          0,
+					"code":            500,
+					"message":         "Failed to save message",
+					"conversation_id": msg.ConversationID,
+				})
+				sendToClient(c, ack)
+				continue
+			}
+			ackPayload := ackMessagePayload(savedMsg, sender, msg.ClientMsgID)
+			ack, _ := json.Marshal(ackPayload)
+			sendToClient(c, ack)
+			if savedMsg.ChatType == "private" {
+				invalidateChatConvCache(savedMsg.ConversationID)
+				models.TouchConversationList(savedMsg.SenderID, savedMsg.ReceiverID)
+				invalidateChatUserInfoCache(savedMsg.SenderID, savedMsg.ReceiverID)
+			} else {
+				memberIDs := models.GetConversationMemberIDs(models.DB, savedMsg.ConversationID)
+				models.TouchConversationList(memberIDs...)
+				invalidateChatUserInfoCache(savedMsg.SenderID, memberIDs...)
+			}
+			broadcastSavedMessageWithClientID(savedMsg, sender.Username, sender.Avatar, msg.ClientMsgID)
+			continue
+		}
+
 		// 广播到所有客户端
 		data, _ := json.Marshal(msg)
 		c.hub.broadcast <- data
@@ -135,6 +234,13 @@ type Hub struct {
 	register   chan *Client
 	unregister chan *Client
 	mu         sync.RWMutex
+}
+
+func asyncBroadcast(data []byte) {
+	if len(data) == 0 {
+		return
+	}
+	ChatHub.broadcast <- data
 }
 
 // NewHub 创建新的 Hub 实例
@@ -389,7 +495,7 @@ func BroadcastMessageWithSender(msg models.Message, senderUsername, senderAvatar
 		slog.Error("Failed to marshal broadcast message", "error", err)
 		return
 	}
-	ChatHub.broadcast <- data
+	asyncBroadcast(data)
 }
 
 // BroadcastMessage 从 HTTP 接口广播消息到所有 WebSocket 客户端（保持向后兼容）
@@ -407,7 +513,7 @@ func BroadcastConversationRead(convID string, userID uint) {
 		"user_id":         userID,
 		"time":            time.Now().Format(time.RFC3339),
 	})
-	ChatHub.broadcast <- data
+	asyncBroadcast(data)
 }
 
 func BroadcastConversationUpdate(convID string, payload map[string]any) {
@@ -419,5 +525,5 @@ func BroadcastConversationUpdate(convID string, payload map[string]any) {
 	payload["event"] = "conversation.update"
 	payload["type"] = "conversation"
 	data, _ := json.Marshal(payload)
-	ChatHub.broadcast <- data
+	asyncBroadcast(data)
 }

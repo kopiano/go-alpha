@@ -87,6 +87,183 @@ func successMessagePayload(msg models.Message, sender models.User) gin.H {
 	return payload
 }
 
+func ackMessagePayload(msg models.Message, sender models.User, clientMsgID string) gin.H {
+	payload := gin.H{
+		"type":            "message",
+		"event":           "message.ack",
+		"client_msg_id":   clientMsgID,
+		"id":              msg.ID,
+		"conversation_id": msg.ConversationID,
+		"sender_id":       msg.SenderID,
+		"sender_username": sender.Username,
+		"sender_avatar":   sender.Avatar,
+		"message_type":    msg.MessageType,
+		"content":         msg.Content,
+		"status":          1,
+		"delivery_status": "confirmed",
+		"created_at":      msg.CreatedAt,
+		"time":            msg.CreatedAt.Format("15:04"),
+	}
+	if msg.ChatType != "" {
+		payload["chat_type"] = msg.ChatType
+	}
+	if msg.ReceiverID > 0 {
+		payload["receiver_id"] = msg.ReceiverID
+	}
+	if msg.GroupID > 0 {
+		payload["group_id"] = msg.GroupID
+	}
+	if msg.FileName != "" {
+		payload["file_name"] = msg.FileName
+	}
+	if msg.FileURL != "" {
+		payload["file_url"] = msg.FileURL
+	}
+	return payload
+}
+
+func buildChatMessage(senderID uint, body *postMessageBody) (models.Message, models.User, error) {
+	normalizeMessageBody(body)
+
+	switch body.ChatType {
+	case "private":
+		recipientID := body.ReceiverID
+		if recipientID == 0 {
+			recipientID = body.RecipientID
+		}
+		if recipientID == 0 {
+			return models.Message{}, models.User{}, gorm.ErrRecordNotFound
+		}
+		if recipientID == senderID {
+			return models.Message{}, models.User{}, gorm.ErrRecordNotFound
+		}
+		convID := body.ConversationID
+		if convID == "" {
+			convID = models.PrivateConvID(senderID, recipientID)
+		}
+		if convID == "" {
+			return models.Message{}, models.User{}, gorm.ErrRecordNotFound
+		}
+		userA := models.PrivateConvUserA(convID)
+		userB := models.PrivateConvUserB(convID)
+		if senderID != userA && senderID != userB {
+			return models.Message{}, models.User{}, gorm.ErrRecordNotFound
+		}
+		recipientID = models.PrivateConvRecipient(senderID, convID)
+		if recipientID == 0 {
+			return models.Message{}, models.User{}, gorm.ErrRecordNotFound
+		}
+		msg := models.Message{
+			ConversationID: convID,
+			ChatType:       "private",
+			SenderID:       senderID,
+			ReceiverID:     recipientID,
+			MessageType:    body.MessageType,
+			Content:        body.Content,
+			FileName:       body.FileName,
+			FileURL:        body.FileURL,
+		}
+		sender := loadSenderProfile(senderID)
+		return msg, sender, nil
+	case "group":
+		memberIDs := models.GetGroupMembers(models.DB, body.GroupID)
+		isMember := false
+		for _, mid := range memberIDs {
+			if mid == senderID {
+				isMember = true
+				break
+			}
+		}
+		if !isMember {
+			return models.Message{}, models.User{}, gorm.ErrRecordNotFound
+		}
+		convID := body.ConversationID
+		if convID == "" {
+			convID = models.EnsureGroupConversation(models.DB, body.GroupID, memberIDs)
+		}
+		msg := models.Message{
+			ConversationID: convID,
+			ChatType:       "group",
+			SenderID:       senderID,
+			GroupID:        body.GroupID,
+			MessageType:    body.MessageType,
+			Content:        body.Content,
+			FileName:       body.FileName,
+			FileURL:        body.FileURL,
+		}
+		sender := loadSenderProfile(senderID)
+		return msg, sender, nil
+	default:
+		return models.Message{}, models.User{}, gorm.ErrRecordNotFound
+	}
+}
+
+func persistAndBroadcastMessage(msg *models.Message, sender models.User) error {
+	saveStart := time.Now()
+	if err := models.SaveMessage(models.DB, msg); err != nil {
+		return err
+	}
+	slog.Info("chat.post_message timing", "chat_type", msg.ChatType, "conversation_id", msg.ConversationID, "save_ms", time.Since(saveStart).Milliseconds())
+
+	broadcastStart := time.Now()
+	BroadcastMessageWithSender(*msg, sender.Username, sender.Avatar)
+	BroadcastConversationUpdate(msg.ConversationID, map[string]any{
+		"last_message":      msg.Content,
+		"last_message_type": msg.MessageType,
+		"last_sender_id":    msg.SenderID,
+	})
+	if msg.ChatType == "private" {
+		invalidateChatConvCache(msg.ConversationID)
+		models.TouchConversationList(msg.SenderID, msg.ReceiverID)
+		invalidateChatUserInfoCache(msg.SenderID, msg.ReceiverID)
+	} else {
+		memberIDs := models.GetConversationMemberIDs(models.DB, msg.ConversationID)
+		models.TouchConversationList(memberIDs...)
+		invalidateChatUserInfoCache(msg.SenderID, memberIDs...)
+	}
+	slog.Info("chat.post_message broadcast", "chat_type", msg.ChatType, "conversation_id", msg.ConversationID, "broadcast_ms", time.Since(broadcastStart).Milliseconds())
+	return nil
+}
+
+func broadcastSavedMessageWithClientID(msg models.Message, senderUsername, senderAvatar, clientMsgID string) {
+	msgTypeStr := "text"
+	switch msg.MessageType {
+	case models.MsgEmoji:
+		msgTypeStr = "emoji"
+	case models.MsgImage:
+		msgTypeStr = "image"
+	case models.MsgFile:
+		msgTypeStr = "file"
+	}
+
+	wsMsg := map[string]any{
+		"type":            "message",
+		"event":           "message.new",
+		"chat_type":       msg.ChatType,
+		"id":              msg.ID,
+		"conversation_id": msg.ConversationID,
+		"sender_id":       msg.SenderID,
+		"sender_username": senderUsername,
+		"sender_avatar":   senderAvatar,
+		"username":        senderUsername,
+		"message_type":    msg.MessageType,
+		"msg_type":        msgTypeStr,
+		"content":         msg.Content,
+		"file_name":       msg.FileName,
+		"file_url":        msg.FileURL,
+		"status":          1,
+		"client_msg_id":   clientMsgID,
+		"created_at":      msg.CreatedAt.Format(time.RFC3339),
+		"time":            msg.CreatedAt.Format("15:04"),
+	}
+	data, err := json.Marshal(wsMsg)
+	if err != nil {
+		slog.Error("Failed to marshal broadcast message", "error", err)
+		return
+	}
+	broadcastToAll(data)
+}
+
 func chatUserInfoCacheKey(userID uint) string {
 	return "chat:user_info:" + strconv.Itoa(int(userID))
 }
@@ -353,7 +530,7 @@ func getChatTeamInfo() gin.H {
 	}
 	teamInfo := gin.H{"id": 0, "name": "", "members": []map[string]any{}}
 	var teamGroup models.Group
-	if err := models.DB.Where("name = ?", "Team").First(&teamGroup).Error; err != nil {
+	if err := models.DB.Where("name = ?", "Group").First(&teamGroup).Error; err != nil {
 		setCachedTeamInfo(teamInfo)
 		return teamInfo
 	}
@@ -380,103 +557,32 @@ func getChatTeamInfo() gin.H {
 // ─── Message send paths ─────────────────────────────────────────
 
 func sendPrivateChatMessage(c *gin.Context, senderID uint, body *postMessageBody) {
-	convID := body.ConversationID
-	if convID == "" && body.RecipientID > 0 {
-		if body.RecipientID == senderID {
-			response.Failed("Cannot send message to yourself", c)
-			return
-		}
-		var err error
-		convID, err = models.EnsurePrivateConversation(models.DB, senderID, body.RecipientID)
-		if err != nil {
-			response.Failed("failed to create conversation", c)
-			return
-		}
-	}
-	if convID == "" {
-		response.Failed("conversation_id or recipient_id is required", c)
+	start := time.Now()
+	msg, sender, err := buildChatMessage(senderID, body)
+	if err != nil {
+		response.Failed("invalid message", c)
 		return
 	}
-
-	userA := models.PrivateConvUserA(convID)
-	userB := models.PrivateConvUserB(convID)
-	if senderID != userA && senderID != userB {
-		response.Failed("You are not a member of this conversation", c)
-		return
-	}
-
-	recipientID := models.PrivateConvRecipient(senderID, convID)
-	if recipientID == 0 {
-		response.Failed("invalid conversation", c)
-		return
-	}
-
-	msg := models.Message{
-		ConversationID: convID,
-		ChatType:       "private",
-		SenderID:       senderID,
-		ReceiverID:     recipientID,
-		MessageType:    body.MessageType,
-		Content:        body.Content,
-		FileName:       body.FileName,
-		FileURL:        body.FileURL,
-	}
-	if err := models.SaveMessage(models.DB, &msg); err != nil {
+	if err := persistAndBroadcastMessage(&msg, sender); err != nil {
 		response.Failed("Failed to save message", c)
 		return
 	}
-
-	sender := loadSenderProfile(senderID)
-	BroadcastMessageWithSender(msg, sender.Username, sender.Avatar)
-	BroadcastConversationUpdate(convID, map[string]any{
-		"last_message":      msg.Content,
-		"last_message_type": msg.MessageType,
-		"last_sender_id":    msg.SenderID,
-	})
-	invalidateChatConvCache(convID)
-	models.TouchConversationList(senderID, recipientID)
-	invalidateChatUserInfoCache(recipientID)
+	slog.Info("chat.post_message timing", "chat_type", "private", "conversation_id", msg.ConversationID, "total_ms", time.Since(start).Milliseconds())
 	response.Success("Message sent", successMessagePayload(msg, sender), c)
 }
 
 func sendGroupChatMessage(c *gin.Context, senderID uint, body *postMessageBody) {
-	memberIDs := models.GetGroupMembers(models.DB, body.GroupID)
-	isMember := false
-	for _, mid := range memberIDs {
-		if mid == senderID {
-			isMember = true
-			break
-		}
-	}
-	if !isMember {
-		response.Failed("You are not a member of this group", c)
+	start := time.Now()
+	msg, sender, err := buildChatMessage(senderID, body)
+	if err != nil {
+		response.Failed("invalid message", c)
 		return
 	}
-
-	convID := models.EnsureGroupConversation(models.DB, body.GroupID, memberIDs)
-	msg := models.Message{
-		ConversationID: convID,
-		ChatType:       "group",
-		SenderID:       senderID,
-		GroupID:        body.GroupID,
-		MessageType:    body.MessageType,
-		Content:        body.Content,
-		FileName:       body.FileName,
-		FileURL:        body.FileURL,
-	}
-	if err := models.SaveMessage(models.DB, &msg); err != nil {
+	if err := persistAndBroadcastMessage(&msg, sender); err != nil {
 		response.Failed("Failed to save message", c)
 		return
 	}
-
-	sender := loadSenderProfile(senderID)
-	BroadcastMessageWithSender(msg, sender.Username, sender.Avatar)
-	BroadcastConversationUpdate(convID, map[string]any{
-		"last_message":      msg.Content,
-		"last_message_type": msg.MessageType,
-		"last_sender_id":    msg.SenderID,
-	})
-	models.TouchConversationList(models.GetConversationMemberIDs(models.DB, convID)...)
+	slog.Info("chat.post_message timing", "chat_type", "group", "conversation_id", msg.ConversationID, "group_id", body.GroupID, "total_ms", time.Since(start).Milliseconds())
 	response.Success("Message sent", successMessagePayload(msg, sender), c)
 }
 
@@ -900,30 +1006,23 @@ func mapKeys[K comparable, V any](m map[K]V) []K {
 	return keys
 }
 
-// invalidateChatUserInfoCache 清除指定用户及其所有会话伙伴的 chat:user_info 缓存
-// 从 messages 表查询会话伙伴（无需 conversation_member 表）
-func invalidateChatUserInfoCache(userID uint) {
+// invalidateChatUserInfoCache 清除指定用户及其会话伙伴的 chat:user_info 缓存
+// 调用方应尽量直接传入已知成员，避免额外查询消息表
+func invalidateChatUserInfoCache(userID uint, peerIDs ...uint) {
 	if models.RDB == nil {
 		return
 	}
 	delKey := func(uid uint) {
+		if uid == 0 {
+			return
+		}
 		models.RDB.Del(context.Background(), chatUserInfoCacheKey(uid))
 		models.RDB.Del(context.Background(), chatUserContactsCacheKey(uid))
 	}
 
 	delKey(userID)
 
-	var partnerIDs []uint
-	models.DB.Model(&models.Message{}).
-		Select("DISTINCT receiver_id").
-		Where("sender_id = ? AND receiver_id > 0", userID).
-		Pluck("receiver_id", &partnerIDs)
-	models.DB.Model(&models.Message{}).
-		Select("DISTINCT sender_id").
-		Where("receiver_id = ? AND sender_id != ?", userID, userID).
-		Pluck("sender_id", &partnerIDs)
-
-	for _, uid := range partnerIDs {
+	for _, uid := range peerIDs {
 		delKey(uid)
 	}
 }

@@ -200,3 +200,10 @@ git log --oneline
 :4b98d3f
 git reset --hard 4b98d3f
 ```
+
+## 后端接口性能优化
+
+### mysql
+* 不要用select `*` from user, 取特定字段查询
+* 异步mysql
+* 用好redis缓存

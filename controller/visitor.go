@@ -158,13 +158,33 @@ func getIPLocation(ip string) ipLocation {
 
 func visitorLocationData(c *gin.Context) gin.H {
 	ip := getClientIP(c)
-	location := getIPLocation(ip)
 	return gin.H{
-		"ip":       ip,
-		"country":  location.Country,
-		"city":     location.City,
-		"location": location.Location,
+		"ip": ip,
 	}
+}
+
+func enrichVisitorLocationAsync(visitorID, ip string, country, city, location string) {
+	if visitorID == "" || ip == "" {
+		return
+	}
+	if country != "" && city != "" && location != "" {
+		return
+	}
+
+	runAsync("enrich_visitor_location", func() {
+		loc := getIPLocation(ip)
+		if loc.Country == "" && loc.City == "" && loc.Location == "" {
+			return
+		}
+		visitor := models.Visitor{VisitorID: visitorID}
+		if err := visitor.UpdateLocation(
+			firstNonEmpty(country, loc.Country),
+			firstNonEmpty(city, loc.City),
+			firstNonEmpty(location, loc.Location),
+		); err != nil {
+			slog.Warn("Visitor.UpdateLocation failed", "error", err, "visitor_id", visitorID)
+		}
+	})
 }
 
 func detectOS(userAgent string) string {
@@ -329,9 +349,10 @@ func RecordVisit(c *gin.Context) {
 	models.RDB.Set(ctx, "visit:cache:total_pv", totalPV, 10*time.Minute)
 
 	locationData := visitorLocationData(c)
-	country := firstNonEmpty(form.Country, fmt.Sprint(locationData["country"]))
-	city := firstNonEmpty(form.City, fmt.Sprint(locationData["city"]))
-	location := firstNonEmpty(form.Location, fmt.Sprint(locationData["location"]))
+	country := strings.TrimSpace(form.Country)
+	city := strings.TrimSpace(form.City)
+	location := strings.TrimSpace(form.Location)
+	ip := fmt.Sprint(locationData["ip"])
 	if location == "" {
 		location = strings.TrimSpace(country + " " + city)
 	}
@@ -353,7 +374,7 @@ func RecordVisit(c *gin.Context) {
 		VisitorID:         visitorID,
 		DeviceFingerprint: strings.TrimSpace(form.DeviceFingerprint),
 
-		IP:       fmt.Sprint(locationData["ip"]),
+		IP:       ip,
 		Country:  country,
 		City:     city,
 		Location: location,
@@ -370,11 +391,18 @@ func RecordVisit(c *gin.Context) {
 		response.Failed("记录访问失败", c)
 		return
 	}
+	enrichVisitorLocationAsync(savedVisitor.VisitorID, ip, country, city, location)
 
 	// Persist today's UV/PV
 	var todayUV int64
+	todayStart, tomorrowStart, err := models.DateRange(today)
+	if err != nil {
+		slog.Warn("invalid today date", "date", today, "error", err)
+		todayStart = time.Now().Truncate(24 * time.Hour)
+		tomorrowStart = todayStart.Add(24 * time.Hour)
+	}
 	models.DB.Model(&models.Visitor{}).
-		Where("DATE(last_seen) = ?", today).
+		Where("last_seen >= ? AND last_seen < ?", todayStart, tomorrowStart).
 		Count(&todayUV)
 	todayPV, _ := models.RDB.Get(ctx, fmt.Sprintf("visit:pv:%s", today)).Int64()
 	models.VisitorSummary{}.Upsert(today, todayUV, todayPV)

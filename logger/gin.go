@@ -46,6 +46,8 @@ func GinMiddleware() gin.HandlerFunc {
 func writeHTTPLogLine(method, path string, status int64, durationMs int64, logTime, clientIP string) {
 	methodColor := colorGray
 	statusColor := colorGreenBg
+	durationColor := ""
+	durationReset := ""
 	switch {
 	case status >= 500:
 		methodColor = colorRed
@@ -60,12 +62,16 @@ func writeHTTPLogLine(method, path string, status int64, durationMs int64, logTi
 		methodColor = colorGreen
 		statusColor = colorGreenBg
 	}
+	if durationMs > 100 {
+		durationColor = colorRed
+		durationReset = colorReset
+	}
 
 	method = fmt.Sprintf("%-7s", method)
 	path = truncatePath(path, 28)
 	path = fmt.Sprintf("%-28s", path)
 	statusText := fmt.Sprintf("%3d", status)
-	_, _ = fmt.Fprintf(os.Stdout, "%s%s%s %s%s%s %6dms %-23s %-15s%s\n", methodColor, method, colorReset, statusColor, statusText, colorReset, durationMs, logTime, clientIP, colorReset)
+	_, _ = fmt.Fprintf(os.Stdout, "%s%s%s %s%s%s %s%6dms%s %-23s %-15s%s\n", methodColor, method, colorReset, statusColor, statusText, colorReset, durationColor, durationMs, durationReset, logTime, clientIP, colorReset)
 }
 
 func truncatePath(s string, max int) string {
