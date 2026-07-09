@@ -55,6 +55,22 @@ func normalizeMessageBody(body *postMessageBody) {
 	}
 }
 
+func validateMessageBodyConsistency(body *postMessageBody) error {
+	switch body.ChatType {
+	case "private":
+		if body.GroupID > 0 {
+			return gorm.ErrRecordNotFound
+		}
+	case "group":
+		if body.ReceiverID > 0 || body.RecipientID > 0 {
+			return gorm.ErrRecordNotFound
+		}
+	default:
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
 func loadSenderProfile(senderID uint) models.User {
 	var sender models.User
 	models.DB.Select("id, username, avatar").First(&sender, senderID)
@@ -129,6 +145,9 @@ func ackMessagePayload(msg models.Message, sender models.User, clientMsgID strin
 
 func buildChatMessage(senderID uint, body *postMessageBody) (models.Message, models.User, error) {
 	normalizeMessageBody(body)
+	if err := validateMessageBodyConsistency(body); err != nil {
+		return models.Message{}, models.User{}, err
+	}
 
 	switch body.ChatType {
 	case "private":
@@ -1166,6 +1185,10 @@ func PostMessage(c *gin.Context) {
 		case body.ReceiverID > 0 || body.RecipientID > 0:
 			body.ChatType = "private"
 		}
+	}
+	if err := validateMessageBodyConsistency(&body); err != nil {
+		response.Failed("invalid chat_type payload", c)
+		return
 	}
 
 	switch body.ChatType {

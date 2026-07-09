@@ -116,6 +116,42 @@ func TestSuccessMessagePayload(t *testing.T) {
 	}
 }
 
+func TestValidateMessageBodyConsistency(t *testing.T) {
+	t.Run("private rejects group_id", func(t *testing.T) {
+		err := validateMessageBodyConsistency(&postMessageBody{
+			ChatType: "private",
+			GroupID:  1,
+		})
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+	})
+
+	t.Run("group rejects receiver_id", func(t *testing.T) {
+		err := validateMessageBodyConsistency(&postMessageBody{
+			ChatType:    "group",
+			ReceiverID:  2,
+			RecipientID: 2,
+			GroupID:     1,
+		})
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+	})
+
+	t.Run("valid private payload", func(t *testing.T) {
+		if err := validateMessageBodyConsistency(&postMessageBody{ChatType: "private"}); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("valid group payload", func(t *testing.T) {
+		if err := validateMessageBodyConsistency(&postMessageBody{ChatType: "group", GroupID: 1}); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
 func BenchmarkNormalizeMessageBody(b *testing.B) {
 	body := postMessageBody{MessageType: models.MsgImage}
 	for i := 0; i < b.N; i++ {
