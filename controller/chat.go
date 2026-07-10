@@ -998,6 +998,24 @@ func GetGroupsMessage(c *gin.Context) {
 		response.Failed("invalid conversation_id", c)
 		return
 	}
+	if !strings.HasPrefix(convID, "g_") {
+		convID = "g_" + strings.TrimPrefix(convID, "group_")
+	}
+	userID := c.GetUint("userId")
+	if userID == 0 {
+		if authHeader := strings.TrimSpace(c.GetHeader("Authorization")); authHeader != "" {
+			token := strings.TrimPrefix(authHeader, "Bearer ")
+			if claims, err := response.ParseToken(token); err == nil {
+				userID = claims.Id
+			}
+		}
+	}
+	if userID > 0 && canAccessConversation(models.DB, convID, userID) {
+		models.MarkConversationRead(models.DB, convID, userID)
+		models.TouchConversationList(userID)
+		BroadcastConversationRead(convID, userID)
+		BroadcastConversationUpdate(convID, map[string]any{"unread_count": 0, "is_read": true})
+	}
 
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	if limit <= 0 || limit > 100 {
