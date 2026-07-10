@@ -540,7 +540,6 @@ POST /api/v1/chat/messages
 ```shell
 {
 "conversation_id": "p_1_2",
-"recipient_id": 2,
 "receiver_id": 2,
 "chat_type": "private",
 "group_id": 0,
@@ -552,9 +551,8 @@ POST /api/v1/chat/messages
 ```
 字段说明：
 
-- conversation_id：会话 ID。私聊一般是 p_用户1_用户2，群聊一般是 g_群组ID
-- recipient_id：私聊接收方用户 ID，和 receiver_id 二选一即可
-- receiver_id：私聊接收方用户 ID，和 recipient_id 二选一即可
+- conversation_id：会话 ID
+- receiver_id：私聊接收方用户 ID
 - chat_type：private 或 group
 - group_id：群聊时必填
 - message_type：消息类型

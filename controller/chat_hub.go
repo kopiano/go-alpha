@@ -58,7 +58,6 @@ type WSMessage struct {
 	Avatar         string `json:"avatar,omitempty"`
 	ClientMsgID    string `json:"client_msg_id,omitempty"`
 	ToUserID       uint   `json:"to_user_id,omitempty"`
-	RecipientID    uint   `json:"recipient_id,omitempty"`
 	ReceiverID     uint   `json:"receiver_id,omitempty"`
 	GroupID        uint   `json:"group_id,omitempty"`
 	ChatType       string `json:"chat_type,omitempty"`
@@ -125,7 +124,6 @@ func (c *Client) readPump() {
 		if msg.Type == "message" && msg.Event == "" && (msg.ChatType != "" || msg.Content != "" || msg.FileName != "" || msg.FileURL != "") {
 			body := &postMessageBody{
 				ConversationID: msg.ConversationID,
-				RecipientID:    msg.RecipientID,
 				ReceiverID:     msg.ReceiverID,
 				ChatType:       msg.ChatType,
 				GroupID:        msg.GroupID,
@@ -140,9 +138,6 @@ func (c *Client) readPump() {
 				} else {
 					body.ChatType = "private"
 				}
-			}
-			if body.RecipientID == 0 && msg.ToUserID > 0 {
-				body.RecipientID = msg.ToUserID
 			}
 			if body.ReceiverID == 0 && msg.ToUserID > 0 {
 				body.ReceiverID = msg.ToUserID

@@ -24,7 +24,6 @@ import (
 
 type postMessageBody struct {
 	ConversationID string `json:"conversation_id"`
-	RecipientID    uint   `json:"recipient_id"`
 	ReceiverID     uint   `json:"receiver_id"`
 	ChatType       string `json:"chat_type"`
 	GroupID        uint   `json:"group_id"`
@@ -62,7 +61,7 @@ func validateMessageBodyConsistency(body *postMessageBody) error {
 			return gorm.ErrRecordNotFound
 		}
 	case "group":
-		if body.ReceiverID > 0 || body.RecipientID > 0 {
+		if body.ReceiverID > 0 {
 			return gorm.ErrRecordNotFound
 		}
 	default:
@@ -152,9 +151,6 @@ func buildChatMessage(senderID uint, body *postMessageBody) (models.Message, mod
 	switch body.ChatType {
 	case "private":
 		recipientID := body.ReceiverID
-		if recipientID == 0 {
-			recipientID = body.RecipientID
-		}
 		if recipientID == 0 {
 			return models.Message{}, models.User{}, gorm.ErrRecordNotFound
 		}
@@ -743,11 +739,6 @@ func bindPostMessageBody(c *gin.Context) (postMessageBody, *multipart.FileHeader
 		body.FileName = c.PostForm("file_name")
 		body.FileURL = c.PostForm("file_url")
 		body.Content = c.PostForm("content")
-		if v := c.PostForm("recipient_id"); v != "" {
-			if n, err := strconv.ParseUint(v, 10, 64); err == nil {
-				body.RecipientID = uint(n)
-			}
-		}
 		if v := c.PostForm("receiver_id"); v != "" {
 			if n, err := strconv.ParseUint(v, 10, 64); err == nil {
 				body.ReceiverID = uint(n)
@@ -1182,7 +1173,7 @@ func PostMessage(c *gin.Context) {
 		switch {
 		case body.GroupID > 0:
 			body.ChatType = "group"
-		case body.ReceiverID > 0 || body.RecipientID > 0:
+		case body.ReceiverID > 0:
 			body.ChatType = "private"
 		}
 	}
@@ -1194,9 +1185,6 @@ func PostMessage(c *gin.Context) {
 	switch body.ChatType {
 	case "private":
 		receiverID := body.ReceiverID
-		if receiverID == 0 {
-			receiverID = body.RecipientID
-		}
 		if receiverID == 0 || receiverID == senderID {
 			response.Failed("Invalid receiver", c)
 			return

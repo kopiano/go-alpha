@@ -129,10 +129,9 @@ func TestValidateMessageBodyConsistency(t *testing.T) {
 
 	t.Run("group rejects receiver_id", func(t *testing.T) {
 		err := validateMessageBodyConsistency(&postMessageBody{
-			ChatType:    "group",
-			ReceiverID:  2,
-			RecipientID: 2,
-			GroupID:     1,
+			ChatType:   "group",
+			ReceiverID: 2,
+			GroupID:    1,
 		})
 		if err == nil {
 			t.Fatalf("expected error")
