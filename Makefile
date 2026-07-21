@@ -24,7 +24,7 @@ docker-rebuild:
 docker-restart:
 	@docker compose down -v && docker compose up -d --build
 
-cloudflare:
+cloud:
 	@cloudflared tunnel run api-test	# 如果error: 关闭vpn
 
 #log-50:
