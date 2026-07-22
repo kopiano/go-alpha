@@ -5,10 +5,6 @@ push:
 merge:
 	@bash push.sh main
 
-run:
-	@docker compose up -d --build backend
-	@cloudflared tunnel run api-test
-
 stop:
 	@docker compose stop backend
 
@@ -23,9 +19,6 @@ docker-rebuild:
 # (慎用)重启服务器(数据全部清空！)
 docker-restart:
 	@docker compose down -v && docker compose up -d --build
-
-cloud:
-	@cloudflared tunnel run api-test	# 如果error: 关闭vpn
 
 #log-50:
 #	@docker compose logs --tail=50 backend
